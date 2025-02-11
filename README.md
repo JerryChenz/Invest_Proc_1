@@ -1,4 +1,3 @@
-# Stock_price_notion
-notion stock Price automation with Python
-
-Creating a Notion Portfolio Tracker with Python and yfinance API
+Invest_Proc_v1
+=========================
+Public equity Investment Management tool for potential opportunities and current holdings.
