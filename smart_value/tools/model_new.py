@@ -4,7 +4,7 @@ import xlwings
 
 from smart_value.tools import model_dash
 from smart_value.tools.find_docs import get_template_paths, new_latest_model
-from smart_value.tools.model_dash import model_pos
+from smart_value.tools.model_dash import thesis_pos
 from smart_value.data import yq_data as yq
 
 

@@ -1,143 +1,116 @@
-import xlwings
+import xlwings as xw
 import re
 from smart_value.data.forex_data import get_forex_dict
-from smart_value.tools import *
+from smart_value.tools import model_dash
 from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths
-from smart_value.tools.model_dash import model_pos
+from smart_value.data.model_data import thesis_pos
 from smart_value.tools.model_update import get_price_dict
 
 
 def update_monitor(quick=True):
-    """Update the Monitor file
+    """Update the stock monitor file with the latest valuation data from models.
 
-    :param quick: the option to update the monitor sheet without updating the price and forex
+    Args:
+        quick (bool): If True, skip updating prices and forex rates. Defaults to True.
     """
+    model_paths = get_model_paths()
+    forex_dict = get_forex_dict() if not quick else {}
+    price_dict = get_price_dict(model_paths) if not quick else {}
 
-    opportunities_path_list = get_model_paths()
-    forex_dict = {}
-    price_dict = {}
-    if quick is False:
-        forex_dict = get_forex_dict()
-        price_dict = get_price_dict(opportunities_path_list)
-
-    # Step 1: load and update the new valuation xlsx
+    # Read and process each valuation model
     opportunities = []
-    for opportunities_path in opportunities_path_list:
-        print(f"Reading {opportunities_path}...")
-        op = read_opportunity(opportunities_path, quick, forex_dict, price_dict)  # load and update
-        opportunities.append(op)
+    for path in model_paths:
+        print(f"Processing {path}...")
+        opportunity = read_opportunity(path, quick, forex_dict, price_dict)
+        if opportunity:
+            opportunities.append(opportunity)
 
-    # Step 2: Update the stock monitor.
-    print("Updating Monitor...")
-    with xlwings.App(visible=False) as app:
-        s_monitor = app.books.open(stock_monitor_file_path)
-        update_opportunities(s_monitor, opportunities)
-        s_monitor.save(stock_monitor_file_path)
-        s_monitor.close()
-    print("Update completed")
+    # Update the monitor file with the collected opportunities
+    print("Updating monitor file...")
+    with xw.App(visible=False) as app:
+        monitor_workbook = app.books.open(stock_monitor_file_path)
+        update_opportunities(monitor_workbook, opportunities)
+        monitor_workbook.save(stock_monitor_file_path)
+        monitor_workbook.close()
+    print("Update completed successfully.")
 
 
-def read_opportunity(opportunities_path, quick, forex_dict, price_dict):
-    """Read all the opportunities at the opportunities_path.
+def read_opportunity(model_path, quick, forex_dict, price_dict):
+    """Read and process an individual valuation model to extract monitoring data.
 
-    :param opportunities_path: path of the model in the opportunities' folder
-    :param quick: the option to skip updating the models
-    :param forex_dict: forex dictionary contains the updated forex rates
-    :param price_dict: price dictionary contains the updated stock prices
-    :return: an Asset object
+    Args:
+        model_path (str): Path to the valuation model Excel file.
+        quick (bool): If True, skip updating the model's thesis_sheet.
+        forex_dict (dict): Updated forex rates for currency conversion.
+        price_dict (dict): Updated stock prices.
+
+    Returns:
+        MonitorStock: An object containing extracted data, or None if invalid.
     """
+    opportunity = None
+    is_stock_model = re.compile(r".*Valuation.*").match(str(model_path))
 
-    r_stock = re.compile(".*Valuation.*")
-    # get the formula results using xlwings because openpyxl doesn't evaluate formula
-    with xlwings.App(visible=False) as app:
-        xl_book = app.books.open(opportunities_path)
-        dash_sheet = xl_book.sheets('Dashboard')
-        if r_stock.match(str(opportunities_path)):
-            if quick is False:
-                model_dash.update_dash_marco(dash_sheet)
-                model_dash.update_dash_market(dash_sheet, forex_dict, price_dict)
-                xl_book.save(opportunities_path)  # xls must be saved to update the values
-            op = MonitorStock(dash_sheet)  # the MonitorStock object representing an opportunity
-        else:
-            print(f"'{opportunities_path}' is incorrect")
-        xl_book.close()
+    if is_stock_model:
+        with xw.App(visible=False) as app:
+            workbook = app.books.open(model_path)
+            thesis_sheet = workbook.sheets('Thesis')
 
-    return op
+            if not quick:
+                # Update the model's thesis_sheet with latest data
+                model_dash.update_dash_marco(thesis_sheet)
+                model_dash.update_dash_market(thesis_sheet, forex_dict, price_dict)
+                workbook.save()
+
+            opportunity = MonitorStock(thesis_sheet)
+            workbook.close()
+    else:
+        print(f"Skipping non-valuation model: {model_path}")
+
+    return opportunity
 
 
-def update_opportunities(s_monitor, op_list):
-    """Update the opportunities sheet in the stock_monitor file
+def update_opportunities(monitor_workbook, opportunities):
+    """Write the extracted opportunities data into the monitor workbook.
 
-    :param op_list: list of stock objects
-    :param s_monitor: xlwings stock monitor file object
+    Args:
+        monitor_workbook (xlwings.Book): The target monitor workbook.
+        opportunities (list): List of MonitorStock objects to write.
     """
+    sheet = monitor_workbook.sheets['Opportunities']
+    start_row = 3
+    sheet.range(f"B{start_row}:W{start_row + len(opportunities) + 30}").clear_contents()
 
-    monitor_sheet = s_monitor.sheets('Opportunities')
-    r = 5  # the starting row
-    final_row = len(op_list) + r + 30  # the estimated final row
-    monitor_sheet.range(f'B5:W{final_row}').clear_contents()
+    # Column mappings: (column_index, attribute_name)
+    COLUMNS = [
+        (2, 'symbol'), (3, 'name'), (4, 'price'), (5, 'price_currency'),
+        (6, 'market_annual_yield'), (7, 'target_price'), (8, 'expected_equity_value'), (9, 'Margin_of_safety'),
+        (10, 'fcfe_yield'), (11, 'dividend_yield'), (12, 'comp_group'),
+        (13, 'investment_type'), (14, 'update_required_after'), (16, 'is_hold')
+    ]
 
-    for op in op_list:
-        monitor_sheet.range((r, 2)).value = op.symbol
-        monitor_sheet.range((r, 3)).value = op.name
-        # Price section
-        monitor_sheet.range((r, 4)).value = op.price
-        monitor_sheet.range((r, 5)).value = op.price_currency
-        monitor_sheet.range((r, 6)).value = op.ep_ratio
-        monitor_sheet.range((r, 7)).value = op.dp_ratio
-        # Valuation section
-        monitor_sheet.range((r, 8)).value = op.value
-        monitor_sheet.range((r, 9)).value = op.lower_value
-        monitor_sheet.range((r, 10)).value = op.upper_value
-        # Miscellaneous section
-        monitor_sheet.range((r, 11)).value = op.watchlist
-        monitor_sheet.range((r, 12)).value = op.comp_group
-        monitor_sheet.range((r, 13)).value = op.last_revision
-        monitor_sheet.range((r, 14)).value = op.next_review
-        # Cost Structure section
-        monitor_sheet.range((r, 15)).value = op.roe
-        monitor_sheet.range((r, 16)).value = op.ebit_margin
-        monitor_sheet.range((r, 17)).value = op.asset_turnover
-        monitor_sheet.range((r, 18)).value = op.leverage_ratio
-        monitor_sheet.range((r, 19)).value = op.interest
-        monitor_sheet.range((r, 20)).value = op.change_of_wc
-        monitor_sheet.range((r, 21)).value = op.mcx
-        # Price Alert
-        monitor_sheet.range((r, 22)).value = f'=IFERROR((D{r}-I{r})/(H{r}-I{r}),"nm")'
-        monitor_sheet.range((r, 23)).value = op.is_hold
-        r += 1
-    print(f"Total {len(op_list)} opportunities Updated")
+    for row_idx, opportunity in enumerate(opportunities, start=start_row):
+        # Write standard attributes
+        for col, attr in COLUMNS:
+            sheet.range((row_idx, col)).value = getattr(opportunity, attr)
+        # Set the price alert formula in column V (22)
+        sheet.range((row_idx, 22)).formula = f'=IFERROR(D{row_idx}/H{row_idx}-1, "nm")'
+
+    print(f"Successfully updated {len(opportunities)} opportunities.")
 
 
 class MonitorStock:
-    """Monitor class
+    """Represents a stock opportunity with data extracted from a valuation model."""
+    # Attribute mapping: (attribute_name, model_pos_key)
+    _ATTR_MAP = [
+        ('symbol', 'symbol'), ('name', 'name'), ('price', 'price'),
+        ('price_currency', 'price_currency'), ('market_annual_yield', 'market_yield'),
+        ('target_price', 'target_price'), ('expected_equity_value', 'equity_value'), ('Margin_of_safety', 'mos'),
+        ('fcfe_yield', 'fcfe_yield'), ('dividend_yield', 'dividend_yield'),
+        ('comp_group', 'comp_group'), ('investment_type', 'investment_type'),
+        ('update_required_after', 'update_after'), ('is_hold', 'is_hold')
+    ]
 
-    Defines what data can be extracted from the valuation model and used in the Monitor.
-    """
-
-    def __init__(self, dash_sheet):
-        self.symbol = dash_sheet.range(model_pos["symbol"]).value
-        self.name = dash_sheet.range(model_pos["name"]).value
-        # Price section
-        self.price = dash_sheet.range(model_pos["price"]).value
-        self.price_currency = dash_sheet.range(model_pos["price_currency"]).value
-        self.ep_ratio = dash_sheet.range(model_pos["ep_ratio"]).value
-        self.dp_ratio = dash_sheet.range(model_pos["dp_ratio"]).value
-        # Valuation section
-        self.value = dash_sheet.range(model_pos["value"]).value
-        self.lower_value = dash_sheet.range(model_pos["lower_value"]).value
-        self.upper_value = dash_sheet.range(model_pos["upper_value"]).value
-        # Miscellaneous section
-        self.watchlist = dash_sheet.range(model_pos["watchlist"]).value
-        self.comp_group = dash_sheet.range(model_pos["comp_group"]).value
-        self.last_revision = dash_sheet.range(model_pos["last_revision"]).value
-        self.next_review = dash_sheet.range(model_pos["next_review"]).value
-        # Cost Structure section
-        self.roe = dash_sheet.range(model_pos["ROE"]).value
-        self.leverage_ratio = dash_sheet.range(model_pos["Leverage_ratio"]).value
-        self.asset_turnover = dash_sheet.range(model_pos["Asset_Turnover"]).value
-        self.ebit_margin = dash_sheet.range(model_pos["EBIT_Margin"]).value
-        self.interest = dash_sheet.range(model_pos["interest"]).value
-        self.change_of_wc = dash_sheet.range(model_pos["change_of_wc"]).value
-        self.mcx = dash_sheet.range(model_pos["mcx"]).value
-        self.is_hold = dash_sheet.range(model_pos["is_hold"]).value
+    def __init__(self, thesis_sheet):
+        """Initialize attributes by reading from the dashboard sheet."""
+        for attr, pos_key in self._ATTR_MAP:
+            setattr(self, attr, thesis_sheet.range(thesis_pos[pos_key]).value)

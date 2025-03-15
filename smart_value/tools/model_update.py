@@ -6,7 +6,7 @@ from smart_value.data.forex_data import get_forex_dict
 from smart_value.data.yq_data import get_quotes
 from smart_value.tools import model_dash
 from smart_value.tools.find_docs import get_model_paths, new_latest_model
-from smart_value.tools.model_dash import model_pos
+from smart_value.tools.model_dash import thesis_pos
 
 input_dict = {
     "info": "C4:D22",
@@ -79,6 +79,6 @@ def get_price_dict(opportunities_path_list):
     for p in opportunities_path_list:
         opp_wb = load_workbook(p, read_only=True, data_only=True)
         dash_sheet = opp_wb["Dashboard"]
-        ticker_list.append(dash_sheet[model_pos["symbol"]].value)
+        ticker_list.append(dash_sheet[thesis_pos["symbol"]].value)
         opp_wb.close()
     return get_quotes(ticker_list)
