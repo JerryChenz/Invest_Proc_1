@@ -20,6 +20,7 @@ import shutil
 
 # Configure base paths
 project_root = pathlib.Path.cwd().resolve()
+# the cwd() above is the output assumed from running the invest_proc main.
 models_folder = project_root / 'financial_models' / 'opportunities'
 templates_folder = project_root / 'financial_models' / 'templates'
 macro_monitor_file_path = project_root / 'financial_models' / 'Macro_Monitor.xlsx'
