@@ -5,9 +5,9 @@ from smart_value.tools.model_new import new_stock_model
 
 def full_update():
     # Step 1: update the xls with the latest template, and market data
-    model_update.update_models(False)
+    model_update.update_models()
     # Step 2: update the monitor
-    stock_monitor.update_monitor(True)
+    # stock_monitor.update_monitor(True)
 
 
 def invest_proc():

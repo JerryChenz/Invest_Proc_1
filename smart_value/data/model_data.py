@@ -16,12 +16,15 @@ thesis_pos = {
     "update_after": "C12",
     "investment_type": "C17",
     "comp_group": "C18",
-    "market_return": "C19",
+    "market_annual_return": "C19",
     "target_return": "C20",
     "holding_period": "E20",
     "target_price": 'C21',
+    # Calculate FCFE Section
+    "fcfe_yield": "C55",
+    "dividend_yield": "C56",
     # Calculate Stable Income Value Section
-    "base_equity_cost": "C63",
+    "base_equity_cost": "C64",
     # Scenario Analysis Section
-    "expected_equity_value": "C107"
+    "expected_equity_value": "C108"
 }

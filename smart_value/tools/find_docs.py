@@ -1,85 +1,86 @@
+"""
+find_docs.py - File Path Management for Valuation Models
+
+Purpose:
+Manages model and template file paths with strict naming convention enforcement:
+- Models: <ticker>_Valuation.xlsx (ticker ≤ 10 chars, no underscores)
+- Templates: Valuation_vX.Y.xlsx (semantic versioning)
+Ensures clean separation of working files from backups and temp files.
+
+Key Features:
+1. Model Validation: Strict regex checks for ticker format and version patterns
+2. Atomic Operations: Safe file creation with existence checks
+3. Version Sorting: Semantic version comparison for templates
+4. Temp File Filtering: Automatic exclusion of backup/autosave files
+"""
+
 import pathlib
 import re
 import shutil
 
-# Location of the folders and documents
-models_folder_path = pathlib.Path.cwd().resolve() / 'financial_models' / 'opportunities'
-stock_monitor_file_path = pathlib.Path.cwd().resolve() / 'financial_models' / 'Stock_Monitor.xlsx'
-macro_monitor_file_path = pathlib.Path.cwd().resolve() / 'financial_models' / 'Macro_Monitor.xlsx'
-template_folder_path = pathlib.Path.cwd().resolve() / 'financial_models' / 'templates'
+# Configure base paths
+project_root = pathlib.Path.cwd().resolve()
+models_folder = project_root / 'financial_models' / 'opportunities'
+templates_folder = project_root / 'financial_models' / 'templates'
+macro_monitor_file_path = project_root / 'financial_models' / 'Macro_Monitor.xlsx'
+stock_monitor_file_path = project_root / 'financial_models' / 'Stock_Monitor.xlsx'
+
+# Validation patterns
+MODEL_PATTERN = re.compile(
+    r'^[^_]{1,10}_Valuation\.xlsx?$',  # Ticker (1-10 chars, no underscores) + _Valuation
+    re.IGNORECASE
+)
+TEMP_PATTERN = re.compile(r'(_old|~|\.tmp)$', re.IGNORECASE)  # Exclude backups/autosaves
+VERSION_PATTERN = re.compile(
+    r'^Valuation_v(\d+\.\d+(?:\.\d+)*)\.xlsx?$',  # Semantic version extraction
+    re.IGNORECASE
+)
 
 
 def get_model_paths():
-    """Load the data of the models from the opportunities folder.
+    """Get validated model paths matching naming convention."""
+    if not models_folder.exists():
+        raise FileNotFoundError(f"Models directory not found: {models_folder}")
 
-    return a list of paths pointing to the models
-    """
-
-    # Define the pattern used to name the models.
-    stock_regex = re.compile(".*Valuation.*(?!_old)")
-    negative_regex = re.compile(".*~.*")
-
-    try:
-        if pathlib.Path(models_folder_path).exists():
-            path_list = [val_file_path for val_file_path in models_folder_path.iterdir()
-                         if models_folder_path.is_dir() and val_file_path.is_file()]
-            opportunities_path_list = list(item for item in path_list if stock_regex.match(str(item)) and
-                                           not negative_regex.match(str(item)))
-            if len(opportunities_path_list) == 0:
-                raise FileNotFoundError("No opportunity file", "opp_file")
-        else:
-            raise FileNotFoundError("The opportunities folder doesn't exist", "opp_folder")
-    except FileNotFoundError as err:
-        if err.args[1] == "opp_folder":
-            print("The opportunities folder doesn't exist")
-        if err.args[1] == "opp_file":
-            print("No opportunity file", "opp_file")
-    else:
-        return opportunities_path_list
+    return [
+        f for f in models_folder.iterdir()
+        if f.is_file()
+           and MODEL_PATTERN.match(f.name)
+           and not TEMP_PATTERN.search(f.name)
+    ]
 
 
 def get_template_paths():
-    """Load the data of the models from the opportunities folder.
+    """Get templates sorted by semantic version (newest first)."""
+    if not templates_folder.exists():
+        raise FileNotFoundError(f"Templates directory not found: {templates_folder}")
 
-    return a list of paths pointing to the models
-    """
+    templates = []
+    for f in templates_folder.iterdir():
+        if match := VERSION_PATTERN.match(f.name):
+            version = tuple(map(int, match.group(1).split('.')))
+            templates.append((version, f))
 
-    # Define the pattern used to name the models.
-    template_regex = re.compile(".*Valuation.*")
-    negative_regex = re.compile(".*~.*")
-
-    try:
-        if pathlib.Path(template_folder_path).exists():
-            path_list = [val_file_path for val_file_path in template_folder_path.iterdir()
-                         if template_folder_path.is_dir() and val_file_path.is_file()]
-            template_path_list = list(item for item in path_list if template_regex.match(str(item)) and
-                                      not negative_regex.match(str(item)))
-            if len(template_path_list) > 1 or len(template_path_list) == 0:
-                raise FileNotFoundError("The template file error", "temp_file")
-        else:
-            raise FileNotFoundError("The stock_template folder doesn't exist", "temp_folder")
-    except FileNotFoundError as err:
-        if err.args[1] == "temp_folder":
-            print("The stock_template folder doesn't exist")
-        if err.args[1] == "temp_file":
-            print("The template file error")
-    else:
-        return template_path_list
+    return [t[1] for t in sorted(templates, reverse=True)]
 
 
-def new_latest_model(file_name):
-    """creates a new model with the latest template at the opportunities folder, returns the new path
+def new_latest_model(ticker):
+    """Create new model from template with validation."""
+    # Validate ticker format
+    if not re.match(r'^[\w\.-]{1,20}$', ticker):
+        raise ValueError(f"Invalid ticker format: {ticker}")
 
-    :param file_name: the file name of the model
-    """
+    # Generate filename
+    model_name = f"{ticker}_Valuation.xlsx"
+    model_path = models_folder / model_name
 
-    template_path_list = get_template_paths()
-    # New model path
-    model_path = models_folder_path / file_name
-    if not pathlib.Path(model_path).exists():
-        # Creates a new model file if not already exists
-        print(f'Creating {file_name}...')
-        shutil.copy(template_path_list[0], model_path)
-    else:
-        print(f'{file_name} already exists')
+    if model_path.exists():
+        raise FileExistsError(f"Model already exists: {model_name}")
+
+    # Copy latest template
+    templates = get_template_paths()
+    if not templates:
+        raise FileNotFoundError("No valid templates available")
+
+    shutil.copy(templates[0], model_path)
     return model_path

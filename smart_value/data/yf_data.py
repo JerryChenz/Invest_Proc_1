@@ -12,57 +12,56 @@ attrs = [
 ]
 '''
 
+# Constants
+RETRY_ATTEMPTS = 2
+RETRY_DELAY = 60
+MOP_HKD_RATE = 0.98  # Hardcoded average rate for MOP to HKD
+FOREX_DAYS_BACK = 7
+FOREX_DAYS_AVERAGE = 3
 
-def get_quote(symbol, option):
-    """ Get the updated quote from yfinance fast_info
 
-    :param symbol: string stock symbol
-    :param option: fast_info argument
-    Below available
-    'currency', 'dayHigh', 'dayLow', 'exchange', 'fiftyDayAverage', 'lastPrice', 'lastVolume',
-    'marketCap', 'open', 'previousClose', 'quoteType', 'regularMarketPreviousClose', 'shares', 'tenDayAverageVolume',
-    'threeMonthAverageVolume', 'timezone', 'twoHundredDayAverage', 'yearChange', 'yearHigh', 'yearLow'
-    :return: quote given option
+def get_quote(symbol: str, option: str) -> float | None:
+    """Retrieve real-time market data for a given symbol using yfinance's fast_info.
+
+    Args:
+        symbol: Stock ticker symbol (e.g., 'AAPL')
+        option: Data point to retrieve (e.g., 'lastPrice', 'marketCap')
+
+    Returns:
+        Requested financial metric or None if unavailable after retries
     """
-
-    result = None
-
-    tries = 2
-    for i in range(tries):
+    for attempt in range(RETRY_ATTEMPTS):
         try:
-            company = Ticker(symbol).fast_info
-            result = company[option]
-        except:  # random API error
-            if i < tries - 1:  # i is zero indexed
-                wait = 60
-                print(f"Possible API error, wait {wait} seconds before retry...")
-                time.sleep(wait)
-                continue
-            else:
-                return result
-        else:
-            return result
+            return Ticker(symbol).fast_info[option]
+        except Exception as e:
+            if attempt < RETRY_ATTEMPTS - 1:
+                print(f"Attempt {attempt + 1} failed ({e}), retrying in {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+    return None
 
 
-def get_forex(report_symbol, price_symbol):
-    """ Return the forex quote
-    Known bug: If there is no quote available, the fxRate will be 0.
+def get_forex(base_currency: str, quote_currency: str) -> float:
+    """Retrieve average forex rate for currency pair using historical data.
 
-    :param report_symbol: String forex report symbol
-    :param price_symbol: String forex price symbol
-    :return: Float average of last 3 day's forex quote
+    Args:
+        base_currency: Base currency code (e.g., 'USD')
+        quote_currency: Quote currency code (e.g., 'HKD')
+
+    Returns:
+        Average exchange rate from the last three trading days
     """
+    # Handle special cases first
+    if base_currency == quote_currency:
+        return 1.0
+    if (base_currency, quote_currency) == ("MOP", "HKD"):
+        return MOP_HKD_RATE
 
-    start_date = dt.datetime.today() - dt.timedelta(days=7)
-    end_date = dt.datetime.today()
-    # print(report_symbol + " " + price_symbol)
-    if report_symbol == price_symbol:
-        return 1
-    elif report_symbol == "MOP" and price_symbol == "HKD":
-        # Known missing quote on yahoo finance
-        return 0.98
-    else:
-        forex_code = f"{report_symbol}{price_symbol}=X"
-        # print(forex_code)
-        # return the average of the last 3 forex quote
-        return float(download(forex_code, start_date, end_date).tail(3)['Adj Close'].mean().item())
+    # Calculate date range for historical data
+    end_date = dt.date.today()
+    start_date = end_date - dt.timedelta(days=FOREX_DAYS_BACK)
+
+    # Fetch and process historical data
+    forex_pair = f"{base_currency}{quote_currency}=X"
+    historical_data = download(forex_pair, start=start_date, end=end_date)
+
+    return historical_data['Adj Close'].tail(FOREX_DAYS_AVERAGE).mean().item()
