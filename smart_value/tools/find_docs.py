@@ -8,7 +8,7 @@ Manages model and template file paths with strict naming convention enforcement:
 Ensures clean separation of working files from backups and temp files.
 
 Key Features:
-1. Model Validation: Strict regex checks for ticker format and version patterns
+1. Model Validation: Regex checks for version patterns
 2. Atomic Operations: Safe file creation with existence checks
 3. Version Sorting: Semantic version comparison for templates
 4. Temp File Filtering: Automatic exclusion of backup/autosave files
@@ -67,9 +67,6 @@ def get_template_paths():
 
 def new_latest_model(ticker):
     """Create new model from template with validation."""
-    # Validate ticker format
-    if not re.match(r'^[\w\.-]{1,20}$', ticker):
-        raise ValueError(f"Invalid ticker format: {ticker}")
 
     # Generate filename
     model_name = f"{ticker}_Valuation.xlsx"
