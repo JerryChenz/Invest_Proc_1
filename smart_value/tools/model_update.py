@@ -1,5 +1,10 @@
 """
-model_update.py - Automated Excel Valuation Model Updater (Hardcoded CSV Version)
+model_update.py - The script automates the process of updating Excel-based financial valuation models to new
+template versions while preserving user inputs. It handles:
+
+1. Template Migration: Transfers user data from old Excel models to new template versions
+2. Batch Processing: Updates multiple files efficiently
+3. Data Integrity: Maintains consistency and prevents data loss during updates
 """
 
 import pathlib
