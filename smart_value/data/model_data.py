@@ -3,23 +3,23 @@
 """
 
 thesis_pos = {
-    "name": "C1",
-    "symbol": "D1",
-    "last_revision": "C2",
-    "is_hold": "F2",
+    "last_revision": "C1",
+    "is_hold": "F1",
     # Executive Summary
+    "name": "C5",
+    "symbol": "D5",
     "price": "C6",
     "price_currency": "D6",
     "shares_outstanding": "C7",
     "report_currency": "C8",
     "fx_rate": "C9",
-    "update_after": "C12",
+    "update_after": "C11",
     "investment_type": "C17",
     "comp_group": "C18",
-    "market_annual_return": "C19",
-    "target_return": "C20",
+    "target_return": "C19",
+    "target_price": 'C20',
     "holding_period": "E20",
-    "target_price": 'C21',
+    "market_annual_return": "C21",
     # Calculate FCFE Section
     "fcfe_yield": "C55",
     "dividend_yield": "C56",
