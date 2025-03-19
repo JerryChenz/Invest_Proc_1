@@ -10,46 +10,15 @@ template versions while preserving user inputs. It handles:
 import pathlib
 import time
 import xlwings as xw
-from smart_value.tools.find_docs import get_model_paths, new_latest_model, get_template_paths
-
-
-def load_template_mapping():
-    """Load hardcoded mapping."""
-    return {
-        'Thesis': [
-            {'column': 3, 'start_row': 1, 'end_row': 1},    # C1
-            {'column': 6, 'start_row': 1, 'end_row': 1},    # F1
-            {'column': 3, 'start_row': 5, 'end_row': 10},   # C5:C10
-            {'column': 3, 'start_row': 18, 'end_row': 19}   # C18:C19
-        ],
-        'Data': [
-            {'column': 3, 'start_row': 1, 'end_row': 1},    # C1
-            {'column': 3, 'start_row': 3, 'end_row': 32}    # C3:M32 (converted to column ranges)
-        ],
-        'Normalized_FCF': [
-            {'column': 3, 'start_row': 4, 'end_row': 4},    # C4
-            {'column': 3, 'start_row': 1, 'end_row': 1},    # C1
-            {'column': 3, 'start_row': 3, 'end_row': 32},   # C3:M32
-            # ... add all other ranges following same pattern
-        ],
-        'BS': [
-            {'column': 3, 'start_row': 1, 'end_row': 1},    # C1
-            {'column': 3, 'start_row': 4, 'end_row': 11},   # C4:D11
-            # ... add all other ranges
-        ],
-        'Scenarios': [
-            {'column': 3, 'start_row': 4, 'end_row': 4},    # C4
-            {'column': 3, 'start_row': 18, 'end_row': 18},  # C18
-            # ... add all other ranges
-        ]
-    }
+from smart_value.tools.find_docs import get_model_paths, new_latest_model
+from smart_value.data.model_data import user_data_pos
 
 
 def update_models():
     """Main update process with atomic file operations and rollback protection."""
     start_total = time.time()
     model_paths = get_model_paths()
-    template_mapping = load_template_mapping()
+    template_mapping = user_data_pos
 
     processed = 0
     print(f"Updating {len(model_paths)} models")
