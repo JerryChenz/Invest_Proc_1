@@ -1,6 +1,6 @@
 import xlwings as xw
 import re
-from smart_value.data.forex_data import get_forex_dict
+from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
 from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths
 from smart_value.data.model_data import thesis_pos
@@ -22,13 +22,13 @@ handling formula cells appropriately.
 
 def update_monitor(skip=True):
     model_paths = get_model_paths()
-    forex_dict = get_forex_dict() if not skip else {}
+    forex_data = ForexData() if not skip else None
     price_dict = get_price_dict(model_paths) if not skip else {}
 
     opportunities = []
     for path in model_paths:
         print(f"Processing {path}...")
-        opportunity = read_opportunity(path, skip, forex_dict, price_dict)
+        opportunity = read_opportunity(path, skip, forex_data, price_dict)
         if opportunity:
             opportunities.append(opportunity)
 
@@ -41,7 +41,7 @@ def update_monitor(skip=True):
     print("Update completed successfully.")
 
 
-def read_opportunity(model_path, quick, forex_dict, price_dict):
+def read_opportunity(model_path, quick, forex_data, price_dict):
     opportunity = None
     is_stock_model = re.compile(r".*Valuation.*").match(str(model_path))
 
@@ -57,10 +57,13 @@ def read_opportunity(model_path, quick, forex_dict, price_dict):
                     if symbol in price_dict:
                         thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
 
-                    # Update forex rate
-                    currency = thesis_sheet.range(thesis_pos['price_currency']).value
-                    if currency in forex_dict:
-                        thesis_sheet.range(thesis_pos['forex_rate']).value = forex_dict[currency]
+                    # Update forex rate (REPORT CURRENCY → PRICE CURRENCY)
+                    price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
+                    report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
+                    if forex_data is not None:
+                        # Swap parameters to get rate from report_currency to price_currency
+                        fx_rate = forex_data.get_rate(report_currency, price_currency)
+                        thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
 
                     workbook.save()
                 except Exception as e:

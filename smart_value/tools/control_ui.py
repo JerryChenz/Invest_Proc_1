@@ -4,7 +4,8 @@ from smart_value.tools.model_new import new_stock_model
 
 
 def full_update():
-    # Step 1: update the xls with the latest template, and market data
+    # Step 1: The model_update.update_models() automates the process of updating Excel-based financial valuation
+    # models to new template versions while preserving user inputs.
     model_update.update_models()
     # Step 2: update the monitor
     # stock_monitor.update_monitor(False)
@@ -18,6 +19,10 @@ def invest_proc():
     # Create a button
     full_update_button = tk.Button(root, text="Full Update", command=full_update)
     full_update_button.grid(column=0, row=0)
+
+    # Button 1: The model_update.update_models() automates the process of updating Excel-based financial valuation
+    # models to new template versions while preserving user inputs.
+
     full_monitor_button = tk.Button(root, text="Full Monitor Update",
                                     command=lambda: stock_monitor.update_monitor(False))
     full_monitor_button.grid(column=1, row=0)
