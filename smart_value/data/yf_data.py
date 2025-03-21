@@ -1,4 +1,3 @@
-import yfinance
 from yfinance import Ticker, download
 import datetime as dt
 import time

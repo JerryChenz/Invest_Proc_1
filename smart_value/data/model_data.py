@@ -1,6 +1,4 @@
-"""This file records the positions in the valuation model.
-
-"""
+"""This file records the positions in the valuation model."""
 
 thesis_pos = {
     "last_revision": "C1", "is_hold": "F1",
@@ -24,6 +22,23 @@ thesis_pos = {
     "base_equity_cost": "C64",
     # Scenario Analysis Section
     "expected_equity_value": "C108"
+}
+
+data_pos = {
+    # Income Statement
+    "date_of_last_annual_report": "C1", "figure_in": "C3",
+    "sales": "C4:M4", "cogs": "C5:M5",
+    "opex": "C6:M6", "selling_expenses": "C7:M7",
+    "research_development": "C8:M8", "jv_result": "C9:M9",
+    "securities_income": "C10:M10", "property_income": "C11:M11",
+    "interest_expense": "C12:M12", "interest_income": "C13:M13",
+    "income_tax": "C14:M14", "net_income": "C15:M15", "nc_income": "C16:M16",
+    # Cash Flow Statement
+    "da": "C19:M19", "capex": "C20:M20", "wcinv": "C21:M21",
+    "dividend_per_share": "C22:M22",
+    # Balance Sheet
+    "Account_receivable": "C25:M25", "inventory": "C26:M26",
+    "total_liabilities": "C27:M27", "total_equity": "C28:M28", "nc_interest": "C29:M29"
 }
 
 user_data_pos = {
@@ -65,4 +80,3 @@ user_data_pos = {
         "C65"
     ]
 }
-
