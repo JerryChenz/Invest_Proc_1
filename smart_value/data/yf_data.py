@@ -66,23 +66,3 @@ def get_forex(base_currency: str, quote_currency: str) -> float:
     historical_data = download(forex_pair, start=start_date, end=end_date)
 
     return historical_data['Adj Close'].tail(FOREX_DAYS_AVERAGE).mean().item()
-
-
-def get_forex_dict():
-    """Fetch forex rates using yfinance with error handling."""
-    forex_dict = {}
-    currencies = ['EUR', 'GBP', 'JPY', 'HKD', 'CNY']  # Add required currencies
-
-    for currency in currencies:
-        try:
-            pair = f"{currency}USD=X"
-            data = yfinance.Ticker(pair)
-            hist = data.history(period='1d')
-            if not hist.empty:
-                forex_dict[currency] = hist['Close'].iloc[0]
-        except Exception as e:
-            print(f"Error fetching {pair}: {str(e)}")
-
-    # Always include USDUSD rate
-    forex_dict['USD'] = 1.0
-    return forex_dict
