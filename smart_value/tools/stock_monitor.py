@@ -4,7 +4,7 @@ from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
 from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths, macro_monitor_file_path
 from smart_value.data.model_data import thesis_pos
-from macro_monitor import update_macro, MonitorMarco
+from smart_value.tools.macro_monitor import update_macro, MonitorMarco
 
 
 """
