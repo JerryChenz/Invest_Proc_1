@@ -2,18 +2,20 @@ import os
 import shutil
 from yahooquery import Ticker
 import xlwings as xw
-from smart_value.tools.find_docs import get_template_paths
+from smart_value.tools.find_docs import get_template_paths, models_folder
 from smart_value.data.model_data import thesis_pos, data_pos
 
 
-def new_stock_model(ticker, comp_group):
+def new_stock_model(ticker, comp_group=None):
     """Creates a new model if it doesn't already exist, then updates it."""
     template_path_list = get_template_paths()
     template_basename = os.path.basename(template_path_list[0])
     model_basename = template_basename.replace("_Template", "")
     model_name = f"{ticker}_{model_basename}"
-    models_dir = os.path.dirname(template_path_list[0])
-    model_path = os.path.join(models_dir, model_name)
+
+    # Ensure models folder exists
+    os.makedirs(models_folder, exist_ok=True)
+    model_path = os.path.join(models_folder, model_name)
 
     if not os.path.exists(model_path):
         shutil.copy(template_path_list[0], model_path)
@@ -21,10 +23,10 @@ def new_stock_model(ticker, comp_group):
     else:
         print(f"Using existing model: {model_name}")
 
-    update_new_model(ticker, comp_group, model_name, model_path)
+    update_new_model(ticker, model_name, model_path, comp_group)
 
 
-def update_new_model(ticker, comp_group, model_name, model_path):
+def update_new_model(ticker, model_name, model_path, comp_group=None):
     """Updates the model with data fetched using yahooquery."""
     print(f'Updating {model_name}...')
     tkr = Ticker(ticker)
@@ -34,8 +36,9 @@ def update_new_model(ticker, comp_group, model_name, model_path):
     summary_profile = tkr.summary_profile.get(ticker, {})
     key_stats = tkr.key_stats.get(ticker, {})
     financial_data = tkr.financial_data.get(ticker, {})
+    income_statement = tkr.income_statement(frequency='a').set_index('asOfDate').sort_index(ascending=False)
 
-    # Extract necessary fields for Thesis sheet
+    # Extract necessary fields
     name = summary_profile.get('name', ticker)
     symbol = ticker
     price_value = price_info.get('regularMarketPrice')
@@ -43,7 +46,7 @@ def update_new_model(ticker, comp_group, model_name, model_path):
     shares_outstanding = key_stats.get('sharesOutstanding')
     report_currency = financial_data.get('financialCurrency', price_currency)
 
-    # Calculate FX rate between price currency and report currency
+    # Calculate FX rate
     if price_currency == report_currency:
         fx_rate = 1.0
     else:
@@ -51,14 +54,14 @@ def update_new_model(ticker, comp_group, model_name, model_path):
         fx_data = Ticker(fx_ticker).price.get(fx_ticker, {})
         fx_rate = fx_data.get('regularMarketPrice', 1.0)
 
-    # Update the Excel model
     with xw.App(visible=False) as app:
         model_xl = app.books.open(model_path)
         thesis_sheet = model_xl.sheets('Thesis')
         data_sheet = model_xl.sheets('Data')
 
         # Update Thesis Sheet
-        thesis_sheet.range(thesis_pos["comp_group"]).value = comp_group
+        if comp_group:
+            thesis_sheet.range(thesis_pos["comp_group"]).value = comp_group
         thesis_sheet.range(thesis_pos["name"]).value = name
         thesis_sheet.range(thesis_pos["symbol"]).value = symbol
         thesis_sheet.range(thesis_pos["price"]).value = price_value
@@ -68,86 +71,77 @@ def update_new_model(ticker, comp_group, model_name, model_path):
         thesis_sheet.range(thesis_pos["fx_rate"]).value = fx_rate
 
         # Update Data Sheet
-        # Fetch annual financial data sorted by latest year first
-        income_statement = tkr.income_statement(frequency='a').set_index('asOfDate').sort_index(ascending=False)
+        # Determine figure_in scaling factor
+        figure_in_value = 1000  # Default to thousands
+        if not income_statement.empty and 'TotalRevenue' in income_statement.columns:
+            latest_revenue = income_statement['TotalRevenue'].iloc[0]
+            if abs(latest_revenue) >= 1_000_000:
+                figure_in_value = 1_000_000
+        data_sheet.range(data_pos["figure_in"]).value = figure_in_value
+
+        # Fetch financial data
         cash_flow = tkr.cash_flow(frequency='a').set_index('asOfDate').sort_index(ascending=False)
         balance_sheet = tkr.balance_sheet(frequency='a').set_index('asOfDate').sort_index(ascending=False)
 
-        # Set date of last annual report and figure_in (currency)
-        date_last_annual = income_statement.index[0].strftime('%Y-%m-%d') if not income_statement.empty else "N/A"
-        data_sheet.range(data_pos["date_of_last_annual_report"]).value = date_last_annual
-        data_sheet.range(data_pos["figure_in"]).value = report_currency
-
         # Mapping from data_pos keys to financial data columns
         financial_mapping = {
-            # Income Statement
-            "sales": ('income_statement', 'Total Revenue'),
-            "cogs": ('income_statement', 'Cost of Revenue'),
-            "opex": ('income_statement', 'Operating Expenses'),
-            "selling_expenses": ('income_statement', 'Selling General and Administrative'),
-            "research_development": ('income_statement', 'Research and Development'),
-            "jv_result": ('income_statement', 'Net Income From Continuing Operations'),
-            "securities_income": ('income_statement', 'Other Non Operating Income Expenses'),
-            "property_income": ('income_statement', 'Operating Income'),
-            "interest_expense": ('income_statement', 'Interest Expense'),
-            "interest_income": ('income_statement', 'Interest Income'),
-            "income_tax": ('income_statement', 'Income Tax Expense'),
-            "net_income": ('income_statement', 'Net Income'),
-            "nc_income": ('income_statement', 'Net Income From Continuing Operations'),
-            # Cash Flow Statement
-            "da": ('cash_flow', 'Depreciation Amortization'),
-            "capex": ('cash_flow', 'Capital Expenditure'),
-            "wcinv": ('cash_flow', 'Change In Working Capital'),
-            "dividend_per_share": ('cash_flow', 'Dividends Paid'),  # Adjusted per share below
-            # Balance Sheet
-            "Account_receivable": ('balance_sheet', 'Accounts Receivable'),
+            "sales": ('income_statement', 'TotalRevenue'),
+            "cogs": ('income_statement', 'CostOfRevenue'),
+            "opex": ('income_statement', 'OperatingExpenses'),
+            "selling_expenses": ('income_statement', 'SellingGeneralAndAdministrative'),
+            "research_development": ('income_statement', 'ResearchAndDevelopment'),
+            "jv_result": ('income_statement', 'NetIncomeFromContinuingOperations'),
+            "securities_income": ('income_statement', 'OtherNonOperatingIncomeExpenses'),
+            "property_income": ('income_statement', 'OperatingIncome'),
+            "interest_expense": ('income_statement', 'InterestExpense'),
+            "interest_income": ('income_statement', 'InterestIncome'),
+            "income_tax": ('income_statement', 'IncomeTaxExpense'),
+            "net_income": ('income_statement', 'NetIncome'),
+            "nc_income": ('income_statement', 'NetIncomeFromContinuingOperations'),
+            "da": ('cash_flow', 'DepreciationAmortization'),
+            "capex": ('cash_flow', 'CapitalExpenditure'),
+            "wcinv": ('cash_flow', 'ChangeInWorkingCapital'),
+            "dividend_per_share": ('cash_flow', 'DividendsPaid'),
+            "Account_receivable": ('balance_sheet', 'AccountsReceivable'),
             "inventory": ('balance_sheet', 'Inventory'),
-            "total_liabilities": ('balance_sheet', 'Total Liabilities'),
-            "total_equity": ('balance_sheet', 'Total Equity'),
-            "nc_interest": ('balance_sheet', 'Noncontrolling Interest'),
+            "total_liabilities": ('balance_sheet', 'TotalLiabilities'),
+            "total_equity": ('balance_sheet', 'TotalEquity'),
+            "nc_interest": ('balance_sheet', 'NoncontrollingInterest'),
         }
 
-        # Update each data field in the Data sheet
+        # Update each data field
         for key, range_ref in data_pos.items():
             if key in ['date_of_last_annual_report', 'figure_in']:
-                continue  # Already handled
+                continue
 
             if key not in financial_mapping:
-                print(f"Warning: {key} not mapped to financial data.")
                 continue
 
             source, column = financial_mapping[key]
-            df = None
-            if source == 'income_statement':
-                df = income_statement
-            elif source == 'cash_flow':
-                df = cash_flow
-            elif source == 'balance_sheet':
-                df = balance_sheet
+            df = income_statement if source == 'income_statement' else cash_flow if source == 'cash_flow' else balance_sheet
 
-            if df is None or df.empty:
-                print(f"No data found for {key}.")
+            if df.empty:
                 continue
 
             try:
                 data = df[column].tolist()
             except KeyError:
-                print(f"Column '{column}' not found in {source} for {key}.")
                 continue
 
-            # Handle dividend_per_share (convert to per-share value)
+            # Special handling for dividend_per_share
             if key == 'dividend_per_share':
                 if shares_outstanding and data:
-                    data = [abs(d) / shares_outstanding for d in data]  # Dividends Paid is negative
+                    data = [abs(d) / shares_outstanding for d in data]  # No figure_in scaling
                 else:
                     data = []
+            else:
+                # Apply figure_in scaling to totals
+                data = [d / figure_in_value for d in data]
 
-            # Get the start cell (e.g., "C4" from "C4:M4")
+            # Write to Excel
             start_cell = range_ref.split(':')[0]
-
-            # Write data to Excel (limited to available years)
             if data:
-                data_to_write = data[:10]  # Max 10 columns (C-M)
+                data_to_write = data[:10]  # Max 10 years
                 data_sheet.range(start_cell).value = data_to_write
 
         model_xl.save()
