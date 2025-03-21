@@ -13,7 +13,7 @@ def full_update():
 def invest_proc():
     # Create the main application window
     root = tk.Tk()
-    root.title("Invest Proc_v3")
+    root.title("Invest Proc_v4")
 
     # Create a button
     full_update_button = tk.Button(root, text="Full Update", command=full_update)

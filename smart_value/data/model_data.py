@@ -3,18 +3,15 @@
 """
 
 thesis_pos = {
-    "last_revision": "C1",
-    "is_hold": "F1",
-    # Executive Summary
-    "name": "C5",
-    "symbol": "D5",
-    "price": "C6",
-    "price_currency": "D6",
+    "last_revision": "C1", "is_hold": "F1",
+    # Stock Information Section
+    "name": "C5", "symbol": "D5",
+    "price": "C6", "price_currency": "D6",
     "shares_outstanding": "C7",
-    "report_currency": "C8",
-    "fx_rate": "C9",
-    "update_after": "C11",
-    "investment_type": "C17",
+    "update_after": "C9",
+    # Valuation Overview Section
+    "investment_type": "C15",
+    "report_currency": "C16", "fx_rate": "C17",
     "comp_group": "C18",
     "target_return": "C19",
     "target_price": 'C20',
