@@ -7,7 +7,7 @@ def full_update():
     # Step 1: update the xls with the latest template, and market data
     model_update.update_models()
     # Step 2: update the monitor
-    stock_monitor.update_monitor(False)
+    # stock_monitor.update_monitor(False)
 
 
 def invest_proc():
