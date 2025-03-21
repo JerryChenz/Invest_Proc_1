@@ -77,7 +77,7 @@ def invest_proc():
     ttk.Label(control_frame, text="Model Operations", style='Header.TLabel').grid(row=0, column=0, columnspan=3,
                                                                                   pady=(0, 15), sticky='w')
 
-    ttk.Button(control_frame, text="Full Model Update",
+    ttk.Button(control_frame, text="Update Model",
                command=lambda: update_model(root, status_var)).grid(row=1, column=0, padx=10, pady=5, sticky='ew')
     ttk.Button(control_frame, text="Full Monitor Update",
                command=lambda: stock_monitor.update_monitor(False)).grid(row=1, column=1, padx=10, pady=5, sticky='ew')
