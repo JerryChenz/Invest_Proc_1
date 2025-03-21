@@ -2,8 +2,10 @@ import xlwings as xw
 import re
 from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
-from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths
+from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths, macro_monitor_file_path
 from smart_value.data.model_data import thesis_pos
+from macro_monitor import update_macro, MonitorMarco
+
 
 """
 Task: Summarize valuation results from multiple Excel models into a monitor file using Python and xlwings.
@@ -25,19 +27,65 @@ def update_monitor(skip=True):
     forex_data = ForexData() if not skip else None
     price_dict = get_price_dict(model_paths) if not skip else {}
 
+    # Update macro data (proceed even if it fails)
+    if not skip:
+        try:
+            update_macro(macro_monitor_file_path)
+        except Exception as e:
+            print(f"Skipping macro update due to error: {e}")
+
+    # Update each model's data and macro assumptions
+    if not skip:
+        with xw.App(visible=False) as app:
+            # Load macro assumptions once
+            macro_wb = app.books.open(macro_monitor_file_path)
+            macro_sheet = macro_wb.sheets['Market_Yield']
+            macro = MonitorMarco(macro_sheet)
+            macro_wb.close()
+
+            for path in model_paths:
+                try:
+                    model_wb = app.books.open(path)
+                    thesis_sheet = model_wb.sheets['Thesis']
+
+                    # Update market data
+                    symbol = thesis_sheet.range(thesis_pos['symbol']).value
+                    if symbol in price_dict:
+                        thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
+
+                    # Update forex rate
+                    price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
+                    report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
+                    if forex_data:
+                        fx_rate = forex_data.get_rate(report_currency, price_currency)
+                        thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
+
+                    # Update macro assumptions
+                    thesis_sheet.range(thesis_pos["target_return"]).value = macro.target_return
+                    thesis_sheet.range(thesis_pos["holding_period"]).value = macro.holding_period
+                    thesis_sheet.range(thesis_pos["base_equity_cost"]).value = macro.equity_cost
+
+                    model_wb.save()
+                    model_wb.close()
+                    print(f"Updated {path}")
+                except Exception as e:
+                    print(f"Error updating {path}: {e}")
+
+    # Read opportunities from all models
     opportunities = []
     for path in model_paths:
         print(f"Processing {path}...")
-        opportunity = read_opportunity(path, skip, forex_data, price_dict)
+        opportunity = read_opportunity(path, skip, forex_data=forex_data, price_dict=price_dict)
         if opportunity:
             opportunities.append(opportunity)
 
+    # Update monitor file
     print("Updating monitor file...")
     with xw.App(visible=False) as app:
-        monitor_workbook = app.books.open(stock_monitor_file_path)
-        update_opportunities(monitor_workbook, opportunities)
-        monitor_workbook.save(stock_monitor_file_path)
-        monitor_workbook.close()
+        monitor_wb = app.books.open(stock_monitor_file_path)
+        update_opportunities(monitor_wb, opportunities)
+        monitor_wb.save()
+        monitor_wb.close()
     print("Update completed successfully.")
 
 

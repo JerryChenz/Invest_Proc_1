@@ -1,9 +1,8 @@
 import os
 from datetime import date
 import xlwings
-from smart_value.tools import market_update
+from smart_value.tools import macro_monitor
 from smart_value.tools.find_docs import get_template_paths, new_latest_model
-from smart_value.tools.market_update import thesis_pos
 from smart_value.data import yq_data as yq
 
 
@@ -100,4 +99,4 @@ def new_dash(dash_sheet, company):
     dash_sheet.range('G3').value = company.price[0]
     dash_sheet.range('H3').value = company.price_currency
     dash_sheet.range('G7').value = company.fx_rate
-    market_update.update_dash_marco(dash_sheet)
+    macro_monitor.update_marco_assumptions(dash_sheet)

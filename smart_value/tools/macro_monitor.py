@@ -1,62 +1,44 @@
-import xlwings
-from smart_value.data.fred_data import get_riskfree_rate, get_us_bbb_yield
-from smart_value.data.hkma_data import get_hk_riskfree
-from smart_value.tools.find_docs import macro_monitor_file_path as macro_monitor_file_path
-from openpyxl import load_workbook
+import xlwings as xw
+from smart_value.data.fred_data import get_riskfree_rate, get_us_prime_rate
+from smart_value.tools.find_docs import macro_monitor_file_path
+from smart_value.data.model_data import thesis_pos
 
-# Define the positions of the Marco data
-macro_pos = {
-    "us_riskfree": "C3",
-    "target_return": "C8",
-    "holding_period": "D8"
+market_yield_pos = {
+    "target_return": "C3",
+    "holding_period": "D3",
+    "equity_cost": "C4",
+    "us_riskfree": "C8",
+    "us_prime": "D8",
+    "cn_riskfree": "C9",
+    "cn_prime": "D9",
+    "hk_riskfree": "C10",
+    "hk_prime": "D10"
 }
 
 
-def update_marco(monitor_path, source="Free"):
-    """Update the marco data in the Macro_Monitor.xlsx file.
-
-    :param monitor_path: path of the Macro_Monitor.xlsx file
-    :param source: the API option
-    """
-
-    print("Updating Marco data...")
-    us_riskfree = None
-    hk_riskfree = None
-    us_bbb_yield = None
-
-    if source == "Free":
+def update_macro(macro_path):
+    """Update macro data in Macro_Monitor.xlsx."""
+    print("Updating Macro data...")
+    try:
         us_riskfree = get_riskfree_rate("us")
-        # print(us_riskfree)
-        us_bbb_yield = get_us_bbb_yield()
-        hk_riskfree = get_hk_riskfree()
-        # print(hk_riskfree)
+        us_prime = get_us_prime_rate()
 
-    with xlwings.App(visible=False) as app:
-        marco_book = app.books.open(monitor_path)
-        macro_sheet = marco_book.sheets('Macro')
-        macro_sheet.range(macro_pos["us_riskfree"]).value = us_riskfree
-        marco_book.save(monitor_path)
-        marco_book.close()
-    print("Finished Marco data Update")
-
-
-def read_marco():
-
-    # Marco data
-    monitor_wb = load_workbook(macro_monitor_file_path, read_only=True, data_only=True)
-    macro_sheet = monitor_wb["Macro"]
-    macro = MonitorMarco(macro_sheet)
-    monitor_wb.close()
-    return macro
+        with xw.App(visible=False) as app:
+            macro_book = app.books.open(macro_path)
+            yield_sheet = macro_book.sheets['Market_Yield']
+            yield_sheet.range(market_yield_pos["us_riskfree"]).value = us_riskfree
+            yield_sheet.range(market_yield_pos["us_prime"]).value = us_prime
+            macro_book.save()
+            macro_book.close()
+        print("Macro data updated successfully.")
+    except Exception as e:
+        print(f"Error updating macro data: {e}")
 
 
 class MonitorMarco:
-    """Monitor class for Macro
-
-    Defines what data can be extracted from the valuation model and used in the Monitor.
-    """
+    """Extracts macro parameters from Market_Yield sheet."""
 
     def __init__(self, macro_sheet):
-        self.us_riskfree = macro_sheet[macro_pos["us_riskfree"]].value
-        self.target_return = macro_sheet[macro_pos["target_return"]].value
-        self.holding_period = macro_sheet[macro_pos["holding_period"]].value
+        self.equity_cost = macro_sheet.range(market_yield_pos["equity_cost"]).value
+        self.target_return = macro_sheet.range(market_yield_pos["target_return"]).value
+        self.holding_period = macro_sheet.range(market_yield_pos["holding_period"]).value
