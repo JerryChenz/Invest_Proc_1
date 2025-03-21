@@ -47,10 +47,12 @@ def update_models():
                     except KeyError:
                         continue
 
-                    for rng in ranges:
-                        col = xw.utils.col_name(rng["column"])
-                        old_range = f"{col}{rng['start_row']}:{col}{rng['end_row']}"
-                        new_sheet.range(old_range).formula = old_sheet.range(old_range).formula
+                    for range_entry in ranges:
+                        # Handle comma-separated ranges
+                        for sub_range in range_entry.split(','):
+                            sub_range = sub_range.strip()
+                            # Copy formulas directly between matching ranges
+                            new_sheet.range(sub_range).formula = old_sheet.range(sub_range).formula
 
                 new_book.save()
                 new_book.close()
