@@ -2,6 +2,7 @@ from yahooquery import Ticker
 import time
 import pandas as pd
 from smart_value.data.yf_data import get_forex
+import re
 
 
 def get_quotes(ticker_list):
@@ -41,6 +42,39 @@ def get_price(ticker, stock_dict):
     """
 
     return stock_dict[ticker]['regularMarketPrice'], stock_dict[ticker]['currency']
+
+
+def clean_hk_symbol(symbol):
+    """Convert 0083.HK to 0830.HK format required by Yahoo"""
+    if symbol.endswith('.HK'):
+        base = symbol[:-3].zfill(4)
+        return f'{base}.HK'
+    return symbol
+
+
+def get_price_dict(model_paths):
+    price_dict = {}
+    for path in model_paths:
+        try:
+            if not re.search(r'Valuation\.xlsx$', str(path)):
+                continue
+
+            # Extract symbol from file path
+            symbol = re.search(r'(\d{4})\.HK', str(path)).group(0)
+            yahoo_symbol = clean_hk_symbol(symbol)
+
+            ticker = Ticker(yahoo_symbol)
+            quote = ticker.price.get(yahoo_symbol, {})
+
+            if quote.get('regularMarketPrice'):
+                price_dict[symbol] = quote['regularMarketPrice']
+            else:
+                print(f"Price unavailable for {symbol} (Yahoo: {yahoo_symbol})")
+
+        except Exception as e:
+            print(f"Error processing {path}: {str(e)}")
+
+    return price_dict
 
 
 class YqStock:

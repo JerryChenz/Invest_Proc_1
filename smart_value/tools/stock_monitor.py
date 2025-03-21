@@ -1,10 +1,9 @@
 import xlwings as xw
 import re
 from smart_value.data.forex_data import get_forex_dict
-from smart_value.tools import market_update
+from smart_value.data.yq_data import get_price_dict
 from smart_value.tools.find_docs import stock_monitor_file_path, get_model_paths
 from smart_value.data.model_data import thesis_pos
-from smart_value.tools.market_update import get_price_dict
 
 """
 Task: Summarize valuation results from multiple Excel models into a monitor file using Python and xlwings.
@@ -22,16 +21,10 @@ handling formula cells appropriately.
 
 
 def update_monitor(skip=True):
-    """Update the stock monitor file with the latest valuation data from models.
-
-    Args:
-        skip (bool): If True, skip updating prices and forex rates. Defaults to True.
-    """
     model_paths = get_model_paths()
     forex_dict = get_forex_dict() if not skip else {}
     price_dict = get_price_dict(model_paths) if not skip else {}
 
-    # Read and process each valuation model
     opportunities = []
     for path in model_paths:
         print(f"Processing {path}...")
@@ -39,7 +32,6 @@ def update_monitor(skip=True):
         if opportunity:
             opportunities.append(opportunity)
 
-    # Update the monitor file with the collected opportunities
     print("Updating monitor file...")
     with xw.App(visible=False) as app:
         monitor_workbook = app.books.open(stock_monitor_file_path)
@@ -50,36 +42,32 @@ def update_monitor(skip=True):
 
 
 def read_opportunity(model_path, quick, forex_dict, price_dict):
-    """Read and process an individual valuation model to extract monitoring data.
-
-    Args:
-        model_path (str): Path to the valuation model Excel file.
-        quick (bool): If True, skip updating the model's thesis_sheet.
-        forex_dict (dict): Updated forex rates for currency conversion.
-        price_dict (dict): Updated stock prices.
-
-    Returns:
-        MonitorStock: An object containing extracted data, or None if invalid.
-    """
     opportunity = None
     is_stock_model = re.compile(r".*Valuation.*").match(str(model_path))
 
     if is_stock_model:
         with xw.App(visible=False) as app:
             workbook = app.books.open(model_path)
-            thesis_sheet = workbook.sheets('Thesis')
+            thesis_sheet = workbook.sheets['Thesis']
 
             if not quick:
-                # Update the model's thesis_sheet with latest data
-                market_update.update_dash_marco(thesis_sheet)
-                market_update.update_market_data(thesis_sheet, forex_dict, price_dict)
-                workbook.save()
+                try:
+                    # Update market price
+                    symbol = thesis_sheet.range(thesis_pos['symbol']).value
+                    if symbol in price_dict:
+                        thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
+
+                    # Update forex rate
+                    currency = thesis_sheet.range(thesis_pos['price_currency']).value
+                    if currency in forex_dict:
+                        thesis_sheet.range(thesis_pos['forex_rate']).value = forex_dict[currency]
+
+                    workbook.save()
+                except Exception as e:
+                    print(f"Error updating {model_path}: {str(e)}")
 
             opportunity = MonitorStock(thesis_sheet)
             workbook.close()
-    else:
-        print(f"Skipping non-valuation model: {model_path}")
-
     return opportunity
 
 
