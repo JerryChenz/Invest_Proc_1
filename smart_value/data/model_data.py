@@ -16,12 +16,12 @@ thesis_pos = {
     "holding_period": "E20",
     "market_annual_return": "C21",
     # Calculate FCFE Section
-    "fcfe_yield": "C55",
-    "dividend_yield": "C56",
+    "fcfe_yield": "C58",
+    "dividend_yield": "C59",
     # Calculate Stable Income Value Section
-    "base_equity_cost": "C64",
+    "base_equity_cost": "C67",
     # Scenario Analysis Section
-    "expected_equity_value": "C108"
+    "expected_equity_value": "C112"
 }
 
 data_pos = {
@@ -47,7 +47,7 @@ user_data_pos = {
         "C5:D8",
         "C16:C19",
         "E20",
-        "C64", "D65,D66"
+        "C67", "D68:D69"
     ],
     'Data': [
         "C1",
@@ -65,8 +65,8 @@ user_data_pos = {
     'Normalized_FCF': [
         "C4", "E3:E19",
         "C28:C29", "C33:C34", "C43", "E22:E43",
-        "C52:C53", "C61", "C65:C67", "E46:E68",
-        "C77", "C82", "C84:C85", "C89", "E71:E96"
+        "C53:C54", "C62", "C66:C68", "E46:E69",
+        "C78", "C83", "C85", "C90", "E71:E97"
     ],
     'Scenarios': [
         "C4",

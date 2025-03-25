@@ -148,7 +148,7 @@ def update_opportunities(monitor_workbook, opportunities):
         # Set the margin of safety formula in column I (9)
         sheet.range((row_idx, 9)).formula = f'=IFERROR(G{row_idx}/H{row_idx}-1, "nm")'
         # Set the price alert formula in column O (15)
-        sheet.range((row_idx, 15)).formula = f'=IFERROR(D{row_idx}/H{row_idx}-1, "nm")'
+        sheet.range((row_idx, 15)).formula = f'=IFERROR(D{row_idx}/G{row_idx}-1, "nm")'
 
     print(f"Successfully updated {len(opportunities)} opportunities.")
 
