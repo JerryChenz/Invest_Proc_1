@@ -7,6 +7,7 @@ from smart_value.data.model_data import thesis_pos
 from smart_value.data.monitor_data import (market_yield_pos, portfolio_mgmt_pos, opportunities_headers,
                                            opportunities_start_row)
 from smart_value.data.fred_data import get_riskfree_rate, get_us_prime_rate
+import pandas as pd
 
 """
 Task: Summarize valuation results from multiple Excel models into a monitor file using Python and xlwings.
@@ -85,38 +86,6 @@ def read_opportunity(model_path):
     return opportunity
 
 
-def update_opportunities(monitor_workbook, opportunities):
-    """Write the extracted opportunities data into the monitor workbook.
-
-    Uses the opportunities_headers mapping to determine column positions.
-    Clears existing data before writing new opportunities.
-    Sets formulas for margin of safety and price alert columns.
-
-    Args:
-        monitor_workbook (xlwings.Book): The target monitor workbook.
-        opportunities (list): List of MonitorStock objects to write.
-    """
-    sheet = monitor_workbook.sheets['Opportunities']
-    start_row = opportunities_start_row
-
-    # Clear existing data (with buffer for potential additions)
-    last_row = start_row + len(opportunities) + 30
-    sheet.range(f"B{start_row}:P{last_row}").clear_contents()
-
-    # Write each opportunity's data
-    for row_idx, opportunity in enumerate(opportunities, start=start_row):
-        # Write all attributes using opportunities_headers mapping
-        for attr, col in opportunities_headers.items():
-            if hasattr(opportunity, attr):  # Only write if attribute exists
-                sheet.range(f"{col}{row_idx}").value = getattr(opportunity, attr)
-
-        # Set formulas for calculated columns
-        sheet.range(f"I{row_idx}").formula = f'=IFERROR(1-G{row_idx}/H{row_idx}, "nm")'  # Margin of safety
-        sheet.range(f"O{row_idx}").formula = f'=IFERROR(D{row_idx}/G{row_idx}-1, "nm")'  # Price alert
-
-    print(f"Successfully updated {len(opportunities)} opportunities.")
-
-
 class MonitorStock:
     """Represents a stock opportunity with data extracted from a valuation model.
 
@@ -140,6 +109,50 @@ class MonitorStock:
             except Exception as e:
                 print(f"Warning: Could not set attribute {attr}: {str(e)}")
                 setattr(self, attr, None)
+
+
+def update_opportunities(monitor_workbook, opportunities):
+    """Update the Opportunities sheet with data from the given opportunities using Pandas.
+
+    Writes all opportunities data to the sheet starting at row 3, columns B to Q, as per the updated
+    opportunities_headers. Clears existing data and sets formulas for ERB and ERC columns based on
+    the Portfolio Management Plan. The allocation_percentage column (P_i) is included but left blank
+    for Excel to calculate.
+
+    Args:
+        monitor_workbook (xlwings.Book): The target monitor workbook.
+        opportunities (list): List of MonitorStock objects to write.
+    """
+    sheet = monitor_workbook.sheets['Opportunities']
+    start_row = opportunities_start_row  # Defined as 3 in monitor_data.py
+    buffer = 100  # Number of rows to clear and set formulas for, to accommodate future entries
+    last_row = start_row + buffer - 1
+
+    # Clear the range B3:Q102 to remove old data
+    sheet.range(f"B{start_row}:Q{last_row}").clear_contents()
+
+    # Define column order based on opportunities_headers, sorted by column letter (B to Q)
+    column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
+
+    # Collect data into a list of dictionaries
+    data = []
+    for opportunity in opportunities:
+        row_data = {attr: getattr(opportunity, attr, None) for attr in column_order}
+        data.append(row_data)
+
+    # Create a Pandas DataFrame with columns in the correct order
+    df = pd.DataFrame(data, columns=column_order)
+
+    # Write the DataFrame to the sheet starting at B3
+    sheet.range(f"B{start_row}").options(index=False).value = df
+
+    # Set formulas for ERB (column G) and ERC (column H)
+    erb_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$10"  # market_annual_return - Benchmark Return
+    erc_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$11"  # market_annual_return - Cash Yield
+    sheet.range(f"G{start_row}:G{last_row}").formula = erb_formula
+    sheet.range(f"H{start_row}:H{last_row}").formula = erc_formula
+
+    print(f"Successfully updated {len(opportunities)} opportunities.")
 
 
 def update_market_data(monitor_path, model_paths):

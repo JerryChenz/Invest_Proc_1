@@ -28,14 +28,15 @@ opportunities_headers = {
     "market_annual_return": "F",
     "ERB": "G",
     "ERC": "H",
-    "target_price": "I",
-    "expected_equity_value": "J",
-    "fcfe_yield": "K",
-    "dividend_yield": "L",
-    "comp_group": "M",
-    "growth_class": "N",
-    "update_after": "O",
-    "is_selected": "P"
+    "allocation_percentage": "I",
+    "target_price": "J",
+    "expected_equity_value": "K",
+    "fcfe_yield": "L",
+    "dividend_yield": "M",
+    "comp_group": "N",
+    "growth_class": "O",
+    "update_after": "P",
+    "is_selected": "Q"
 }
 
 # start row of the Opportunities.
