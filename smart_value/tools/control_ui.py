@@ -2,8 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from smart_value.tools import model_update, stock_monitor
 from smart_value.tools.model_new import new_stock_model
-from smart_value.tools import macro_monitor
-from smart_value.tools.find_docs import macro_monitor_file_path
 
 
 def update_model(root, status_var):
@@ -85,11 +83,6 @@ def invest_proc():
                command=lambda: stock_monitor.update_monitor(False)).grid(row=1, column=1, padx=10, pady=5, sticky='ew')
     ttk.Button(control_frame, text="Simple Monitor Update",
                command=lambda: stock_monitor.update_monitor(True)).grid(row=1, column=2, padx=10, pady=5, sticky='ew')
-
-    # New button for Macro Monitor Update
-    ttk.Button(control_frame, text="Macro Monitor Update",
-               command=lambda: macro_monitor.update_macro(macro_monitor_file_path)).grid(row=2, column=0, columnspan=3,
-                                                                                         padx=10, pady=5, sticky='ew')
 
     # Configure grid weights for control frame
     control_frame.columnconfigure((0, 1, 2), weight=1)
