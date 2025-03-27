@@ -24,6 +24,7 @@ def create_model(root, symbol_var, comp_var, status_var):
     try:
         new_stock_model(symbol, comp_group)
         status_var.set(f"Created model for {symbol}")
+        messagebox.showinfo("Success", f"Model created for {symbol}", parent=root)
     except Exception as e:
         messagebox.showerror("Error", f"Model creation failed: {str(e)}", parent=root)
 
@@ -73,7 +74,7 @@ def invest_proc():
     status_var = tk.StringVar()
     status_var.set("Ready")
 
-    # Update Controls Section
+    # Model Operations Section
     ttk.Label(control_frame, text="Model Operations", style='Header.TLabel').grid(row=0, column=0, columnspan=3,
                                                                                   pady=(0, 15), sticky='w')
 
@@ -84,10 +85,9 @@ def invest_proc():
     ttk.Button(control_frame, text="Simple Monitor Update",
                command=lambda: stock_monitor.update_monitor(True)).grid(row=1, column=2, padx=10, pady=5, sticky='ew')
 
-    # Configure grid weights for control frame
     control_frame.columnconfigure((0, 1, 2), weight=1)
 
-    # Model Creation Section
+    # New Model Creation Section
     ttk.Label(input_frame, text="New Model Creation", style='Header.TLabel').grid(row=0, column=0, columnspan=3,
                                                                                   pady=(0, 15), sticky='w')
 
@@ -101,7 +101,6 @@ def invest_proc():
                command=lambda: create_model(root, symbol_var, comp_var, status_var)).grid(row=1, column=2, rowspan=2,
                                                                                           padx=10, pady=5, sticky='ew')
 
-    # Configure grid weights for input frame
     input_frame.columnconfigure(1, weight=1)
 
     # Status Bar
