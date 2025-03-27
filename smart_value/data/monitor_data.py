@@ -12,12 +12,12 @@ market_yield_pos = {
 portfolio_mgmt_pos = {
     "benchmark_return": "C10",
     "cash_yield": "C11",
-    "max_holdings": "C25",
-    "single_investment_cap": "C26",
-    "target_return": "C29",
-    "holding_period": "E29",
-    "equity_cost": "C30",
-    "cash_allocation": "C56"
+    "max_holdings": "C26",
+    "single_investment_cap": "C27",
+    "target_return": "C30",
+    "holding_period": "E30",
+    "equity_cost": "C31",
+    "cash_allocation": "C57"
 }
 
 opportunities_headers = {

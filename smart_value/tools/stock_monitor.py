@@ -114,43 +114,94 @@ class MonitorStock:
 def update_opportunities(monitor_workbook, opportunities):
     """Update the Opportunities sheet with data from the given opportunities using Pandas.
 
-    Writes all opportunities data to the sheet starting at row 3, columns B to Q, as per the updated
-    opportunities_headers. Clears existing data and sets formulas for ERB and ERC columns based on
-    the Portfolio Management Plan. The allocation_percentage column (P_i) is included but left blank
-    for Excel to calculate.
-
     Args:
         monitor_workbook (xlwings.Book): The target monitor workbook.
         opportunities (list): List of MonitorStock objects to write.
     """
     sheet = monitor_workbook.sheets['Opportunities']
-    start_row = opportunities_start_row  # Defined as 3 in monitor_data.py
-    buffer = 100  # Number of rows to clear and set formulas for, to accommodate future entries
-    last_row = start_row + buffer - 1
+    start_row = opportunities_start_row  # 3, data starts here, headers at row 2
 
-    # Clear the range B3:Q102 to remove old data
+    # Read parameters from Portfolio_Mgmt sheet
+    portfolio_mgmt_sheet = monitor_workbook.sheets['Portfolio_Mgmt']
+    benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value  # e.g., 0.1174
+    cash_allocation = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_allocation"]).value  # e.g., 0.3
+    max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)  # e.g., 10
+    single_investment_cap = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["single_investment_cap"]).value  # e.g., 0.3
+
+    # Portfolio Allocation Logic
+    # Step 1: Filter eligible opportunities (is_selected = True, ERB > 0)
+    eligible_opportunities = [
+        opp for opp in opportunities
+        if opp.is_selected and (opp.market_annual_return - benchmark_return) > 0
+    ]
+
+    # Step 2 & 3: Calculate Attractiveness A_i and rank, select top max_holdings
+    sorted_eligible = sorted(
+        eligible_opportunities,
+        key=lambda opp: (opp.market_annual_return - benchmark_return) / benchmark_return,
+        reverse=True
+    )
+    selected_opportunities = sorted_eligible[:max_holdings]
+
+    # Step 4: Allocate with caps
+    if selected_opportunities:
+        # Calculate A_i for selected
+        A_values = {
+            opp: (opp.market_annual_return - benchmark_return) / benchmark_return
+            for opp in selected_opportunities
+        }
+        sum_A = sum(A_values.values())
+
+        # Compute initial P_i
+        initial_P = {
+            opp: (A_values[opp] / sum_A) * (1 - cash_allocation) if sum_A != 0 else 0
+            for opp in selected_opportunities
+        }
+
+        # Apply single investment cap and redistribute
+        capped_opps = [opp for opp in selected_opportunities if initial_P[opp] > single_investment_cap]
+        uncapped_opps = [opp for opp in selected_opportunities if initial_P[opp] <= single_investment_cap]
+
+        P_values = {opp: single_investment_cap for opp in capped_opps}
+        sum_capped = sum(P_values.values())
+        remaining_allocation = (1 - cash_allocation) - sum_capped
+        sum_uncapped_initial = sum(initial_P[opp] for opp in uncapped_opps)
+
+        scaling_factor = remaining_allocation / sum_uncapped_initial if sum_uncapped_initial > 0 else 0
+        for opp in uncapped_opps:
+            P_values[opp] = initial_P[opp] * scaling_factor
+    else:
+        P_values = {}
+
+    # Set allocation_percentage for all opportunities
+    for opp in opportunities:
+        opp.allocation_percentage = P_values.get(opp, 0)
+
+    # Clear old data (use a reasonable range, e.g., 100 rows from start)
+    buffer = 100
+    last_row = start_row + buffer - 1
     sheet.range(f"B{start_row}:Q{last_row}").clear_contents()
 
-    # Define column order based on opportunities_headers, sorted by column letter (B to Q)
+    # Define column order based on opportunities_headers
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
 
-    # Collect data into a list of dictionaries
-    data = []
-    for opportunity in opportunities:
-        row_data = {attr: getattr(opportunity, attr, None) for attr in column_order}
-        data.append(row_data)
+    # Collect data
+    data = [
+        {attr: getattr(opportunity, attr, None) for attr in column_order}
+        for opportunity in opportunities
+    ]
 
-    # Create a Pandas DataFrame with columns in the correct order
+    # Create and write DataFrame starting at B3
     df = pd.DataFrame(data, columns=column_order)
+    sheet.range(f"B{start_row}").options(pd.DataFrame, header=False, index=False).value = df
 
-    # Write the DataFrame to the sheet starting at B3
-    sheet.range(f"B{start_row}").options(index=False).value = df
-
-    # Set formulas for ERB (column G) and ERC (column H)
-    erb_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$10"  # market_annual_return - Benchmark Return
-    erc_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$11"  # market_annual_return - Cash Yield
-    sheet.range(f"G{start_row}:G{last_row}").formula = erb_formula
-    sheet.range(f"H{start_row}:H{last_row}").formula = erc_formula
+    # Set ERB and ERC formulas only for data rows
+    if opportunities:  # Avoid invalid range if no opportunities
+        last_data_row = start_row + len(opportunities) - 1
+        erb_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$10"  # ERB
+        erc_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$11"  # ERC
+        sheet.range(f"G{start_row}:G{last_data_row}").formula = erb_formula
+        sheet.range(f"H{start_row}:H{last_data_row}").formula = erc_formula
 
     print(f"Successfully updated {len(opportunities)} opportunities.")
 
