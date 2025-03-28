@@ -111,97 +111,153 @@ class MonitorStock:
                 setattr(self, attr, None)
 
 
-def update_opportunities(monitor_workbook, opportunities):
-    """Update the Opportunities sheet with data from the given opportunities using Pandas.
+def update_opportunities(monitor_wb, opportunities):
+    sheet = monitor_wb.sheets['Opportunities']
+    portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
+    start_row = opportunities_start_row
 
-    Args:
-        monitor_workbook (xlwings.Book): The target monitor workbook.
-        opportunities (list): List of MonitorStock objects to write.
-    """
-    sheet = monitor_workbook.sheets['Opportunities']
-    start_row = opportunities_start_row  # 3, data starts here, headers at row 2
+    # Retrieve parameters and convert to proper types
+    benchmark_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value)
+    cash_yield = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value)
+    max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)  # Must be integer
+    single_investment_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["single_investment_cap"]).value)
+    negative_low_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["negative_low_growth"]).value)
+    high_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["high_growth"]).value)
+    target_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value)
+    initial_cash_allocation = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["initial_cash_allocation"]).value)
+    sensitivity_factor = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["sensitivity_factor"]).value)
+    max_cash_allocation = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_cash_allocation"]).value)
 
-    # Read parameters from Portfolio_Mgmt sheet
-    portfolio_mgmt_sheet = monitor_workbook.sheets['Portfolio_Mgmt']
-    benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value  # e.g., 0.1174
-    cash_allocation = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_allocation"]).value  # e.g., 0.3
-    max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)  # e.g., 10
-    single_investment_cap = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["single_investment_cap"]).value  # e.g., 0.3
-
-    # Portfolio Allocation Logic
-    # Step 1: Filter eligible opportunities (is_selected = True, ERB > 0)
+    # Filter eligible opportunities (Selected and ERB > 0)
     eligible_opportunities = [
         opp for opp in opportunities
-        if opp.is_selected and (opp.market_annual_return - benchmark_return) > 0
+        if getattr(opp, 'is_selected', False) and (getattr(opp, 'market_annual_return', 0) - benchmark_return) > 0
     ]
 
-    # Step 2 & 3: Calculate Attractiveness A_i and rank, select top max_holdings
+    # Sort by ERB descending and select top max_holdings
     sorted_eligible = sorted(
         eligible_opportunities,
-        key=lambda opp: (opp.market_annual_return - benchmark_return) / benchmark_return,
+        key=lambda opp: (getattr(opp, 'market_annual_return', 0) - benchmark_return),
         reverse=True
     )
     selected_opportunities = sorted_eligible[:max_holdings]
 
-    # Step 4: Allocate with caps
+    # Calculate Attractiveness Scores (A_i)
+    A_values = {}
+    sum_A = 0.0
     if selected_opportunities:
-        # Calculate A_i for selected
         A_values = {
-            opp: (opp.market_annual_return - benchmark_return) / benchmark_return
+            opp: (getattr(opp, 'market_annual_return', 0) - benchmark_return) / benchmark_return
             for opp in selected_opportunities
         }
         sum_A = sum(A_values.values())
 
-        # Compute initial P_i
-        initial_P = {
-            opp: (A_values[opp] / sum_A) * (1 - cash_allocation) if sum_A != 0 else 0
+    # Compute Projected Return with initial cash
+    projected_return = 0.0
+    if sum_A > 0:
+        projected_return = sum(
+            (A / sum_A) * getattr(opp, 'market_annual_return', 0)
+            for opp, A in A_values.items()
+        ) * (1 - initial_cash_allocation)
+
+    # Dynamic Cash Adjustment
+    delta_cash = 0.0
+    if projected_return < target_return:
+        shortfall = target_return - projected_return
+        delta_cash = sensitivity_factor * (shortfall / target_return)
+        delta_cash = min(delta_cash, max_cash_allocation - initial_cash_allocation)
+    adjusted_cash = initial_cash_allocation + delta_cash
+
+    # Compute initial weights with adjusted cash
+    initial_weights = {}
+    if selected_opportunities and sum_A > 0:
+        initial_weights = {
+            opp: (A_values[opp] / sum_A) * (1 - adjusted_cash)
             for opp in selected_opportunities
         }
 
-        # Apply single investment cap and redistribute
-        capped_opps = [opp for opp in selected_opportunities if initial_P[opp] > single_investment_cap]
-        uncapped_opps = [opp for opp in selected_opportunities if initial_P[opp] <= single_investment_cap]
+    # Apply Single Investment Cap
+    P_values = {}
+    total_allocated = 0.0
+    for opp in selected_opportunities:
+        weight = initial_weights.get(opp, 0.0)
+        if weight > single_investment_cap:
+            P_values[opp] = single_investment_cap
+            total_allocated += single_investment_cap
+        else:
+            P_values[opp] = weight
+            total_allocated += weight
 
-        P_values = {opp: single_investment_cap for opp in capped_opps}
-        sum_capped = sum(P_values.values())
-        remaining_allocation = (1 - cash_allocation) - sum_capped
-        sum_uncapped_initial = sum(initial_P[opp] for opp in uncapped_opps)
+    # Redistribute single cap excess to cash
+    excess_single = (1 - adjusted_cash) - total_allocated
+    adjusted_cash += excess_single
 
-        scaling_factor = remaining_allocation / sum_uncapped_initial if sum_uncapped_initial > 0 else 0
-        for opp in uncapped_opps:
-            P_values[opp] = initial_P[opp] * scaling_factor
-    else:
-        P_values = {}
+    # Apply Growth Classification Caps
+    # High Growth
+    high_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') == 'High Growth']
+    sum_high = sum(P_values.get(opp, 0.0) for opp in high_growth_opps)
+    if sum_high > high_growth_cap:
+        excess_high = sum_high - high_growth_cap
+        scale = high_growth_cap / sum_high
+        for opp in high_growth_opps:
+            P_values[opp] *= scale
+        adjusted_cash += excess_high
 
-    # Set allocation_percentage for all opportunities
+    # Negative/Low Growth
+    low_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') in ['Negative', 'Low Growth']]
+    sum_low = sum(P_values.get(opp, 0.0) for opp in low_growth_opps)
+    if sum_low > negative_low_growth_cap:
+        excess_low = sum_low - negative_low_growth_cap
+        scale = negative_low_growth_cap / sum_low
+        for opp in low_growth_opps:
+            P_values[opp] *= scale
+        adjusted_cash += excess_low
+
+    # Assign allocation weights
     for opp in opportunities:
-        opp.allocation_percentage = P_values.get(opp, 0)
+        opp.allocation_weight = P_values.get(opp, 0.0)
 
-    # Clear old data (use a reasonable range, e.g., 100 rows from start)
+    # Calculate Adjusted Portfolio Return (including cash yield)
+    investment_return = sum(
+        getattr(opp, 'allocation_weight', 0.0) * getattr(opp, 'market_annual_return', 0.0)
+        for opp in opportunities
+    )
+    adjusted_portfolio_return = investment_return + (adjusted_cash * cash_yield)
+
+    # Write outputs to Portfolio_Mgmt sheet
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_cash_allocation"]).value = adjusted_cash
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_portfolio_return"]).value = adjusted_portfolio_return
+
+    # Clear old data and write new opportunities
     buffer = 100
     last_row = start_row + buffer - 1
     sheet.range(f"B{start_row}:Q{last_row}").clear_contents()
 
-    # Define column order based on opportunities_headers
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
-
-    # Collect data
-    data = [
-        {attr: getattr(opportunity, attr, None) for attr in column_order}
-        for opportunity in opportunities
-    ]
-
-    # Create and write DataFrame starting at B3
+    data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
-    sheet.range(f"B{start_row}").options(pd.DataFrame, header=False, index=False).value = df
+    sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df  # Ensure integer
 
-    # Set ERB and ERC formulas only for data rows
-    if opportunities:  # Avoid invalid range if no opportunities
-        last_data_row = start_row + len(opportunities) - 1
-        erb_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$10"  # ERB
-        erc_formula = f"=F{start_row} - 'Portfolio_Mgmt'!$C$11"  # ERC
-        sheet.range(f"G{start_row}:G{last_data_row}").formula = erb_formula
-        sheet.range(f"H{start_row}:H{last_data_row}").formula = erc_formula
+    # Get the cell references from portfolio_mgmt_pos
+    benchmark_cell = portfolio_mgmt_pos["benchmark_return"]
+    cash_yield_cell = portfolio_mgmt_pos["cash_yield"]
+
+    # Set ERB and ERC formulas using dynamic references
+    if opportunities:
+        try:
+            last_data_row = start_row + len(opportunities) - 1
+            erb_formula = f"=F{int(start_row)} - {benchmark_cell}"  # ERB = F - Benchmark
+            erc_formula = f"=F{int(start_row)} - {cash_yield_cell}"  # ERC = F - Cash Yield
+
+            # Apply formulas to the range
+            sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula
+            sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = erc_formula
+        except Exception as e:
+            print(f"Error setting formulas: {e}")
+            # Fallback to setting formulas row by row
+            for row in range(int(start_row), int(last_data_row) + 1):
+                sheet.range(f"G{row}").formula = f"=F{row} - {benchmark_cell}"
+                sheet.range(f"H{row}").formula = f"=F{row} - {cash_yield_cell}"
 
     print(f"Successfully updated {len(opportunities)} opportunities.")
 

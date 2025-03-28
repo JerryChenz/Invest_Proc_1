@@ -14,10 +14,16 @@ portfolio_mgmt_pos = {
     "cash_yield": "C11",
     "max_holdings": "C26",
     "single_investment_cap": "C27",
-    "target_return": "C30",
-    "holding_period": "E30",
-    "equity_cost": "C31",
-    "cash_allocation": "C57"
+    "negative_low_growth": "C30",
+    "high_growth": "C31",
+    "target_return": "C34",
+    "holding_period": "E34",
+    "equity_cost": "C35",
+    "initial_cash_allocation": "E60",
+    "sensitivity_factor": "C87",
+    "max_cash_allocation": "C88",
+    "adjusted_cash_allocation": "C100",
+    "adjusted_portfolio_return": "C101",
 }
 
 opportunities_headers = {
@@ -28,7 +34,7 @@ opportunities_headers = {
     "market_annual_return": "F",
     "ERB": "G",
     "ERC": "H",
-    "allocation_percentage": "I",
+    "allocation_weight": "I",
     "target_price": "J",
     "expected_equity_value": "K",
     "fcfe_yield": "L",
