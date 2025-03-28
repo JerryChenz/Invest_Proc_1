@@ -27,27 +27,15 @@ avoid discrepancies.
 
 
 def update_monitor(skip=True):
-    """The main function to update the stock monitor
-
-    Args:
-        skip (bool): Whether to skip updating market yields, prices, etc. Defaults to True.
-
-    Process:
-        1. Retrieve paths to all Excel valuation models
-        2. If not in skip mode, update market yield data
-        3. Process each model to extract opportunity data
-        4. Update the monitor file with the extracted data
-    """
+    """The main function to update the stock monitor."""
     model_paths = get_model_paths()
 
-    # Update market yield (proceed even if it fails)
     if not skip:
         try:
             update_market_data(stock_monitor_file_path, model_paths)
         except Exception as e:
             print(f"Skipping market yield update due to error: {e}")
 
-    # Read opportunities from all models
     opportunities = []
     for model_path in model_paths:
         print(f"Processing {model_path}...")
@@ -55,11 +43,11 @@ def update_monitor(skip=True):
         if opportunity:
             opportunities.append(opportunity)
 
-    # Update monitor file
     print("Updating monitor file...")
     with xw.App(visible=False) as app:
         monitor_wb = app.books.open(stock_monitor_file_path)
-        update_opportunities(monitor_wb, opportunities)
+        calculate_allocation_weights(monitor_wb, opportunities)  # First, set weights
+        update_monitor_data(monitor_wb, opportunities)           # Then, write data
         monitor_wb.save()
         monitor_wb.close()
     print("Update completed successfully.")
@@ -111,12 +99,29 @@ class MonitorStock:
                 setattr(self, attr, None)
 
 
-def update_opportunities(monitor_wb, opportunities):
-    sheet = monitor_wb.sheets['Opportunities']
-    portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
-    start_row = opportunities_start_row
+def calculate_allocation_weights(monitor_wb, opportunities):
+    """
+    Calculate allocation weights for the portfolio based on the given opportunities and portfolio management parameters.
 
-    # Retrieve parameters and convert to proper types
+    Steps:
+    1. Retrieve portfolio parameters from the "Portfolio_Mgmt" sheet (e.g., benchmark return, caps).
+    2. Filter opportunities with 'Selected' flag and ERB > 0.
+    3. Select top opportunities up to the maximum holdings limit, ranked by ERB.
+    4. Calculate attractiveness scores (A_i = ERB_i / Benchmark Return).
+    5. Compute projected portfolio return with initial cash allocation.
+    6. Adjust cash allocation if projected return is below target.
+    7. Distribute weights, enforcing single investment and growth classification caps.
+    8. Set allocation_weight on each opportunity (0 for unselected).
+    9. Calculate adjusted portfolio return with cash yield.
+    10. Write adjusted cash allocation and portfolio return to "Portfolio_Mgmt" sheet.
+
+    Args:
+        monitor_wb (xlwings.Book): The monitor workbook.
+        opportunities (list): List of MonitorStock objects representing investment opportunities.
+    """
+    portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
+
+    # Retrieve parameters from Portfolio_Mgmt sheet
     benchmark_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value)
     cash_yield = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value)
     max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)
@@ -152,7 +157,7 @@ def update_opportunities(monitor_wb, opportunities):
         }
         sum_A = sum(A_values.values())
 
-    # Compute Projected Return with initial cash
+    # Compute projected return with initial cash
     projected_return = 0.0
     if sum_A > 0:
         projected_return = sum(
@@ -160,7 +165,7 @@ def update_opportunities(monitor_wb, opportunities):
             for opp, A in A_values.items()
         ) * (1 - initial_cash_allocation)
 
-    # Dynamic Cash Adjustment
+    # Dynamic cash adjustment if below target
     delta_cash = 0.0
     if projected_return < target_return:
         shortfall = target_return - projected_return
@@ -176,7 +181,7 @@ def update_opportunities(monitor_wb, opportunities):
             for opp in selected_opportunities
         }
 
-    # Apply Single Investment Cap
+    # Apply single investment cap
     P_values = {}
     total_allocated = 0.0
     for opp in selected_opportunities:
@@ -188,11 +193,11 @@ def update_opportunities(monitor_wb, opportunities):
             P_values[opp] = weight
             total_allocated += weight
 
-    # Redistribute single cap excess to cash
+    # Redistribute excess from single cap to cash
     excess_single = (1 - adjusted_cash) - total_allocated
     adjusted_cash += excess_single
 
-    # Apply Growth Classification Caps
+    # Apply growth classification caps
     # High Growth
     high_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') == 'High Growth']
     sum_high = sum(P_values.get(opp, 0.0) for opp in high_growth_opps)
@@ -214,56 +219,71 @@ def update_opportunities(monitor_wb, opportunities):
             P_values[opp] *= scale
         adjusted_cash += excess_low
 
-    # Cap adjusted_cash at max_cash_allocation
+    # Ensure adjusted cash doesn’t exceed max
     adjusted_cash = min(adjusted_cash, max_cash_allocation)
 
-    # Assign allocation weights
+    # Assign allocation weights to all opportunities
     for opp in opportunities:
         opp.allocation_weight = P_values.get(opp, 0.0)
 
-    # Calculate Adjusted Portfolio Return (including cash yield)
+    # Calculate adjusted portfolio return (including cash yield)
     investment_return = sum(
         getattr(opp, 'allocation_weight', 0.0) * getattr(opp, 'market_annual_return', 0.0)
         for opp in opportunities
     )
     adjusted_portfolio_return = investment_return + (adjusted_cash * cash_yield)
 
-    # Write outputs to Portfolio_Mgmt sheet
+    # Write results to Portfolio_Mgmt sheet
     portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_cash_allocation"]).value = adjusted_cash
     portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_portfolio_return"]).value = adjusted_portfolio_return
+
+
+def update_monitor_data(monitor_wb, opportunities):
+    """
+    Update the "Opportunities" sheet with the latest opportunity data.
+
+    Steps:
+    1. Sort opportunities by market_annual_return (descending).
+    2. Clear existing data in the specified range.
+    3. Write all opportunity data (e.g., symbol, price, allocation_weight) to the sheet.
+    4. Set ERB and ERC formulas for each row.
+
+    Args:
+        monitor_wb (xlwings.Book): The monitor workbook.
+        opportunities (list): List of MonitorStock objects with allocation_weight set.
+    """
+    sheet = monitor_wb.sheets['Opportunities']
+    start_row = opportunities_start_row
 
     # Sort opportunities by market_annual_return descending
     opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
 
-    # Clear old data and write new opportunities
-    buffer = 100
+    # Clear old data
+    buffer = 100  # Extra rows to ensure all old data is cleared
     last_row = start_row + buffer - 1
     sheet.range(f"B{start_row}:Q{last_row}").clear_contents()
 
+    # Write new data
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
     sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df
 
-    # Get absolute references for benchmark and cash yield
-    benchmark_ref = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).get_address(row_absolute=True,
-                                                                                                   column_absolute=True)
-    cash_yield_ref = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).get_address(row_absolute=True,
-                                                                                              column_absolute=True)
-
-    # Set ERB and ERC formulas using absolute references
+    # Set ERB and ERC formulas
     if opportunities:
         try:
             last_data_row = start_row + len(opportunities) - 1
+            benchmark_ref = (monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["benchmark_return"]).
+                             get_address(row_absolute=True, column_absolute=True))
+            cash_yield_ref = monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["cash_yield"]).get_address(
+                row_absolute=True, column_absolute=True)
             erb_formula = f"=F{int(start_row)} - {benchmark_ref}"
             erc_formula = f"=F{int(start_row)} - {cash_yield_ref}"
-
-            # Apply formulas to the range
             sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula
             sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = erc_formula
         except Exception as e:
             print(f"Error setting formulas: {e}")
-            # Fallback to setting formulas row by row
+            # Fallback: Set formulas row-by-row
             for row in range(int(start_row), int(last_data_row) + 1):
                 sheet.range(f"G{row}").formula = f"=F{row} - {benchmark_ref}"
                 sheet.range(f"H{row}").formula = f"=F{row} - {cash_yield_ref}"
