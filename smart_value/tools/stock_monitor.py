@@ -119,7 +119,7 @@ def update_opportunities(monitor_wb, opportunities):
     # Retrieve parameters and convert to proper types
     benchmark_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value)
     cash_yield = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value)
-    max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)  # Must be integer
+    max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)
     single_investment_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["single_investment_cap"]).value)
     negative_low_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["negative_low_growth"]).value)
     high_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["high_growth"]).value)
@@ -204,7 +204,8 @@ def update_opportunities(monitor_wb, opportunities):
         adjusted_cash += excess_high
 
     # Negative/Low Growth
-    low_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') in ['Negative', 'Low Growth']]
+    low_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') in ['Negative',
+                                                                                                     'Low Growth']]
     sum_low = sum(P_values.get(opp, 0.0) for opp in low_growth_opps)
     if sum_low > negative_low_growth_cap:
         excess_low = sum_low - negative_low_growth_cap
@@ -212,6 +213,9 @@ def update_opportunities(monitor_wb, opportunities):
         for opp in low_growth_opps:
             P_values[opp] *= scale
         adjusted_cash += excess_low
+
+    # Cap adjusted_cash at max_cash_allocation
+    adjusted_cash = min(adjusted_cash, max_cash_allocation)
 
     # Assign allocation weights
     for opp in opportunities:
@@ -228,6 +232,9 @@ def update_opportunities(monitor_wb, opportunities):
     portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_cash_allocation"]).value = adjusted_cash
     portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_portfolio_return"]).value = adjusted_portfolio_return
 
+    # Sort opportunities by market_annual_return descending
+    opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
+
     # Clear old data and write new opportunities
     buffer = 100
     last_row = start_row + buffer - 1
@@ -236,18 +243,20 @@ def update_opportunities(monitor_wb, opportunities):
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
-    sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df  # Ensure integer
+    sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df
 
-    # Get the cell references from portfolio_mgmt_pos
-    benchmark_cell = portfolio_mgmt_pos["benchmark_return"]
-    cash_yield_cell = portfolio_mgmt_pos["cash_yield"]
+    # Get absolute references for benchmark and cash yield
+    benchmark_ref = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).get_address(row_absolute=True,
+                                                                                                   column_absolute=True)
+    cash_yield_ref = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).get_address(row_absolute=True,
+                                                                                              column_absolute=True)
 
-    # Set ERB and ERC formulas using dynamic references
+    # Set ERB and ERC formulas using absolute references
     if opportunities:
         try:
             last_data_row = start_row + len(opportunities) - 1
-            erb_formula = f"=F{int(start_row)} - {benchmark_cell}"  # ERB = F - Benchmark
-            erc_formula = f"=F{int(start_row)} - {cash_yield_cell}"  # ERC = F - Cash Yield
+            erb_formula = f"=F{int(start_row)} - {benchmark_ref}"
+            erc_formula = f"=F{int(start_row)} - {cash_yield_ref}"
 
             # Apply formulas to the range
             sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula
@@ -256,8 +265,8 @@ def update_opportunities(monitor_wb, opportunities):
             print(f"Error setting formulas: {e}")
             # Fallback to setting formulas row by row
             for row in range(int(start_row), int(last_data_row) + 1):
-                sheet.range(f"G{row}").formula = f"=F{row} - {benchmark_cell}"
-                sheet.range(f"H{row}").formula = f"=F{row} - {cash_yield_cell}"
+                sheet.range(f"G{row}").formula = f"=F{row} - {benchmark_ref}"
+                sheet.range(f"H{row}").formula = f"=F{row} - {cash_yield_ref}"
 
     print(f"Successfully updated {len(opportunities)} opportunities.")
 
