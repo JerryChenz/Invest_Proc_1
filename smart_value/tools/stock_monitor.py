@@ -329,28 +329,29 @@ def update_market_data(monitor_path, model_paths):
     # Update each model's market data and model assumptions
     for path in model_paths:
         try:
-            model_wb = app.books.open(path)
-            thesis_sheet = model_wb.sheets['Thesis']
+            with xw.App(visible=False) as app:  # New App context for each model
+                model_wb = app.books.open(path)
+                thesis_sheet = model_wb.sheets['Thesis']
 
-            # Update market data
-            symbol = thesis_sheet.range(thesis_pos['symbol']).value
-            if symbol in price_dict:
-                thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
+                # Update market data
+                symbol = thesis_sheet.range(thesis_pos['symbol']).value
+                if symbol in price_dict:
+                    thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
 
-            # Update forex rate
-            price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
-            report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
-            if forex_data:
-                fx_rate = forex_data.get_rate(report_currency, price_currency)
-                thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
+                # Update forex rate
+                price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
+                report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
+                if forex_data:
+                    fx_rate = forex_data.get_rate(report_currency, price_currency)
+                    thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
 
-            # Update market yield assumptions
-            thesis_sheet.range(thesis_pos["target_return"]).value = target_return
-            thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
-            thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
+                # Update market yield assumptions
+                thesis_sheet.range(thesis_pos["target_return"]).value = target_return
+                thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
+                thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
 
-            model_wb.save()
-            model_wb.close()
-            print(f"Updated {path}")
+                model_wb.save()
+                model_wb.close()
+                print(f"Updated {path}")
         except Exception as e:
             print(f"Error updating {path}: {e}")

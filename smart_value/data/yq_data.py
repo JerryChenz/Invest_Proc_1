@@ -20,11 +20,21 @@ def get_price_dict(model_paths):
                 continue
 
             # Extract symbol from file path
-            symbol = re.search(r'(\d{4})\.HK', str(path)).group(0)
+            symbol_match = re.search(r'(\d{4})\.HK', str(path))
+            if not symbol_match:
+                continue
+            symbol = symbol_match.group(0)
             yahoo_symbol = clean_hk_symbol(symbol)
 
             ticker = Ticker(yahoo_symbol)
-            quote = ticker.price.get(yahoo_symbol, {})
+            price_data = ticker.price
+
+            # Check if price_data is a dictionary
+            if isinstance(price_data, dict):
+                quote = price_data.get(yahoo_symbol, {})
+            else:
+                print(f"Unexpected data format for {yahoo_symbol}: {price_data}")
+                quote = {}
 
             if quote.get('regularMarketPrice'):
                 price_dict[symbol] = quote['regularMarketPrice']
