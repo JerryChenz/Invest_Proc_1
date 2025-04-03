@@ -70,7 +70,7 @@ This Python project was developed to automate and streamline the investment work
 2.  Configure necessary file paths (e.g., `stock_monitor_file_path`, model locations).
 3.  Run the main user interface:
     ```bash
-    python control_ui.py
+    python invest_proc_main.py
     ```
 4.  Use the GUI buttons to:
     *   **Update Model:** Run the template migration script (`model_update.py`).
