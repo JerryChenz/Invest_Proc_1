@@ -101,23 +101,15 @@ class MonitorStock:
 
 def calculate_allocation_weights(monitor_wb, opportunities):
     """
-    Calculate allocation weights for the portfolio based on the given opportunities and portfolio management parameters.
+    Calculate allocation weights for the portfolio based on the given opportunities and portfolio management rules.
 
     Steps:
-    1. Retrieve portfolio parameters from the "Portfolio_Mgmt" sheet (e.g., benchmark return, caps).
-    2. Filter opportunities with 'Selected' flag and ERB > 0.
-    3. Select top opportunities up to the maximum holdings limit, ranked by ERB.
-    4. Calculate attractiveness scores (A_i = ERB_i / Benchmark Return).
-    5. Compute projected portfolio return with initial cash allocation.
-    6. Adjust cash allocation if projected return is below target.
-    7. Distribute weights, enforcing single investment and growth classification caps.
-    8. Set allocation_weight on each opportunity (0 for unselected).
-    9. Calculate adjusted portfolio return with cash yield.
-    10. Write adjusted cash allocation and portfolio return to "Portfolio_Mgmt" sheet.
-
-    Args:
-        monitor_wb (xlwings.Book): The monitor workbook.
-        opportunities (list): List of MonitorStock objects representing investment opportunities.
+    1. Retrieve parameters (benchmark return, cash yield, max holdings, etc.).
+    2. Filter eligible opportunities (Selected Flag = True, ERB > 0).
+    3. Enforce max holdings and growth classification limits during selection.
+    4. Calculate provisional weights (Single Investment Cap), delta adjustment, and allocation weights.
+    5. Adjust allocations if total exceeds investable capital, respecting ERB ranking.
+    6. Calculate projected cash reserve and portfolio return.
     """
     portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
 
@@ -126,12 +118,10 @@ def calculate_allocation_weights(monitor_wb, opportunities):
     cash_yield = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value)
     max_holdings = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_holdings"]).value)
     single_investment_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["single_investment_cap"]).value)
-    negative_low_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["negative_low_growth"]).value)
-    high_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["high_growth"]).value)
+    negative_low_growth_cap = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["negative_low_growth"]).value)
+    high_growth_cap = int(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["high_growth"]).value)
     target_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value)
     min_cash_reserve = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["min_cash_reserve"]).value)
-    sensitivity_factor = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["sensitivity_factor"]).value)
-    max_cash_allocation = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_cash_allocation"]).value)
 
     # Filter eligible opportunities (Selected and ERB > 0)
     eligible_opportunities = [
@@ -139,103 +129,88 @@ def calculate_allocation_weights(monitor_wb, opportunities):
         if getattr(opp, 'is_selected', False) and (getattr(opp, 'market_annual_return', 0) - benchmark_return) > 0
     ]
 
-    # Sort by ERB descending and select top max_holdings
+    # Enforce max holdings and growth classification limits during selection
     sorted_eligible = sorted(
         eligible_opportunities,
         key=lambda opp: (getattr(opp, 'market_annual_return', 0) - benchmark_return),
         reverse=True
     )
-    selected_opportunities = sorted_eligible[:max_holdings]
 
-    # Calculate Attractiveness Scores (A_i)
-    A_values = {}
-    sum_A = 0.0
-    if selected_opportunities:
-        A_values = {
-            opp: (getattr(opp, 'market_annual_return', 0) - benchmark_return) / benchmark_return
+    selected_opportunities = []
+    hg_count = 0
+    nlg_count = 0
+
+    for opp in sorted_eligible:
+        growth_class = getattr(opp, 'growth_class', '')
+        if growth_class == 'High Growth':
+            if hg_count >= high_growth_cap:
+                continue
+            hg_count += 1
+        elif growth_class in ['Negative', 'Low Growth']:
+            if nlg_count >= negative_low_growth_cap:
+                continue
+            nlg_count += 1
+        # Check if max_holdings is reached
+        if len(selected_opportunities) >= max_holdings:
+            break
+        selected_opportunities.append(opp)
+
+    # Handle no eligible investments case
+    if not selected_opportunities:
+        projected_cash = 1.0
+        projected_portfolio_return = cash_yield
+    else:
+        # Calculate provisional weights and delta adjustments
+        for opp in selected_opportunities:
+            r_i = getattr(opp, 'market_annual_return', 0)
+            delta = max(0, (target_return - r_i) / target_return)
+            provisional_weight = single_investment_cap
+            opp.allocation_weight = provisional_weight * (1 - delta)
+
+        allocated_weight = sum(getattr(opp, 'allocation_weight', 0) for opp in selected_opportunities)
+        investable_capital = 1 - min_cash_reserve
+
+        # Adjust allocation if exceeds investable capital
+        if allocated_weight > investable_capital:
+            # Sort by ERB descending
+            sorted_by_erb = sorted(
+                selected_opportunities,
+                key=lambda opp: (getattr(opp, 'market_annual_return', 0) - benchmark_return),
+                reverse=True
+            )
+            cumulative = 0.0
+            index = 0
+            for i, opp in enumerate(sorted_by_erb):
+                current_weight = getattr(opp, 'allocation_weight', 0)
+                if cumulative + current_weight <= investable_capital:
+                    cumulative += current_weight
+                else:
+                    # Allocate remaining to this opp, set others to 0
+                    remaining = investable_capital - cumulative
+                    opp.allocation_weight = remaining
+                    cumulative = investable_capital
+                    index = i + 1
+                    break
+            # Set remaining to 0
+            for opp in sorted_by_erb[index:]:
+                opp.allocation_weight = 0.0
+            allocated_weight = cumulative
+
+        projected_cash = 1 - allocated_weight
+        investment_return = sum(
+            getattr(opp, 'allocation_weight', 0.0) * getattr(opp, 'market_annual_return', 0.0)
             for opp in selected_opportunities
-        }
-        sum_A = sum(A_values.values())
+        )
+        projected_portfolio_return = investment_return + (projected_cash * cash_yield)
 
-    # Compute projected return with initial cash
-    projected_return = 0.0
-    if sum_A > 0:
-        projected_return = sum(
-            (A / sum_A) * getattr(opp, 'market_annual_return', 0)
-            for opp, A in A_values.items()
-        ) * (1 - min_cash_reserve)
-
-    # Dynamic cash adjustment if below target
-    delta_cash = 0.0
-    if projected_return < target_return:
-        shortfall = target_return - projected_return
-        delta_cash = sensitivity_factor * (shortfall / target_return)
-        delta_cash = min(delta_cash, max_cash_allocation - min_cash_reserve)
-    adjusted_cash = min_cash_reserve + delta_cash
-
-    # Compute initial weights with adjusted cash
-    initial_weights = {}
-    if selected_opportunities and sum_A > 0:
-        initial_weights = {
-            opp: (A_values[opp] / sum_A) * (1 - adjusted_cash)
-            for opp in selected_opportunities
-        }
-
-    # Apply single investment cap
-    P_values = {}
-    total_allocated = 0.0
-    for opp in selected_opportunities:
-        weight = initial_weights.get(opp, 0.0)
-        if weight > single_investment_cap:
-            P_values[opp] = single_investment_cap
-            total_allocated += single_investment_cap
-        else:
-            P_values[opp] = weight
-            total_allocated += weight
-
-    # Redistribute excess from single cap to cash
-    excess_single = (1 - adjusted_cash) - total_allocated
-    adjusted_cash += excess_single
-
-    # Apply growth classification caps
-    # High Growth
-    high_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') == 'High Growth']
-    sum_high = sum(P_values.get(opp, 0.0) for opp in high_growth_opps)
-    if sum_high > high_growth_cap:
-        excess_high = sum_high - high_growth_cap
-        scale = high_growth_cap / sum_high
-        for opp in high_growth_opps:
-            P_values[opp] *= scale
-        adjusted_cash += excess_high
-
-    # Negative/Low Growth
-    low_growth_opps = [opp for opp in selected_opportunities if getattr(opp, 'growth_class', '') in ['Negative',
-                                                                                                     'Low Growth']]
-    sum_low = sum(P_values.get(opp, 0.0) for opp in low_growth_opps)
-    if sum_low > negative_low_growth_cap:
-        excess_low = sum_low - negative_low_growth_cap
-        scale = negative_low_growth_cap / sum_low
-        for opp in low_growth_opps:
-            P_values[opp] *= scale
-        adjusted_cash += excess_low
-
-    # Ensure adjusted cash doesn’t exceed max
-    adjusted_cash = min(adjusted_cash, max_cash_allocation)
-
-    # Assign allocation weights to all opportunities
+    # Set allocation_weight to 0 for non-selected opportunities
     for opp in opportunities:
-        opp.allocation_weight = P_values.get(opp, 0.0)
-
-    # Calculate adjusted portfolio return (including cash yield)
-    investment_return = sum(
-        getattr(opp, 'allocation_weight', 0.0) * getattr(opp, 'market_annual_return', 0.0)
-        for opp in opportunities
-    )
-    adjusted_portfolio_return = investment_return + (adjusted_cash * cash_yield)
+        if opp not in selected_opportunities:
+            opp.allocation_weight = 0.0
 
     # Write results to Portfolio_Mgmt sheet
-    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_cash"]).value = adjusted_cash
-    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_portfolio_return"]).value = adjusted_portfolio_return
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_cash"]).value = projected_cash
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_portfolio_return"]).value = projected_portfolio_return
 
 
 def update_monitor_data(monitor_wb, opportunities):
