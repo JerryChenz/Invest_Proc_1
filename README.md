@@ -26,7 +26,7 @@ This heavily Excel-based manual process presented several significant challenges
 5.  **Scalability Issues:** The manual approach limited the number of investments that could be effectively tracked and analyzed within the available time.
 6.  **Operational Risk:** The reliance on manual steps introduced significant operational risk.
 
-## Resolution: The Python Automation Suite
+## Resolution: Invest_Proc
 
 This Python project was developed to automate and streamline the investment workflow, addressing the complications of the manual process. It acts as an intelligent layer interacting with the existing Excel files.
 
