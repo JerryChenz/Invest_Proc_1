@@ -10,20 +10,18 @@ market_yield_pos = {
 }
 
 portfolio_mgmt_pos = {
-    "benchmark_return": "C10",
-    "cash_yield": "C11",
-    "max_holdings": "C26",
-    "single_investment_cap": "C27",
-    "negative_low_growth": "C30",
-    "high_growth": "C31",
-    "target_return": "C34",
-    "holding_period": "E34",
-    "equity_cost": "C35",
-    "initial_cash_allocation": "E60",
-    "sensitivity_factor": "C87",
-    "max_cash_allocation": "C88",
-    "adjusted_cash_allocation": "C100",
-    "adjusted_portfolio_return": "C101",
+    "benchmark_return": "C12",
+    "cash_yield": "C13",
+    "max_holdings": "C29",
+    "single_investment_cap": "C30",
+    "negative_low_growth": "C33",
+    "high_growth": "C34",
+    "target_return": "C37",
+    "holding_period": "E37",
+    "equity_cost": "C38",
+    "min_cash_reserve": "E63",
+    "projected_cash": "C113",
+    "projected_portfolio_return": "C114",
 }
 
 opportunities_headers = {

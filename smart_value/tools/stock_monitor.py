@@ -129,7 +129,7 @@ def calculate_allocation_weights(monitor_wb, opportunities):
     negative_low_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["negative_low_growth"]).value)
     high_growth_cap = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["high_growth"]).value)
     target_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value)
-    initial_cash_allocation = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["initial_cash_allocation"]).value)
+    min_cash_reserve = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["min_cash_reserve"]).value)
     sensitivity_factor = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["sensitivity_factor"]).value)
     max_cash_allocation = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["max_cash_allocation"]).value)
 
@@ -163,15 +163,15 @@ def calculate_allocation_weights(monitor_wb, opportunities):
         projected_return = sum(
             (A / sum_A) * getattr(opp, 'market_annual_return', 0)
             for opp, A in A_values.items()
-        ) * (1 - initial_cash_allocation)
+        ) * (1 - min_cash_reserve)
 
     # Dynamic cash adjustment if below target
     delta_cash = 0.0
     if projected_return < target_return:
         shortfall = target_return - projected_return
         delta_cash = sensitivity_factor * (shortfall / target_return)
-        delta_cash = min(delta_cash, max_cash_allocation - initial_cash_allocation)
-    adjusted_cash = initial_cash_allocation + delta_cash
+        delta_cash = min(delta_cash, max_cash_allocation - min_cash_reserve)
+    adjusted_cash = min_cash_reserve + delta_cash
 
     # Compute initial weights with adjusted cash
     initial_weights = {}
@@ -234,8 +234,8 @@ def calculate_allocation_weights(monitor_wb, opportunities):
     adjusted_portfolio_return = investment_return + (adjusted_cash * cash_yield)
 
     # Write results to Portfolio_Mgmt sheet
-    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_cash_allocation"]).value = adjusted_cash
-    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["adjusted_portfolio_return"]).value = adjusted_portfolio_return
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_cash"]).value = adjusted_cash
+    portfolio_mgmt_sheet.range(portfolio_mgmt_pos["projected_portfolio_return"]).value = adjusted_portfolio_return
 
 
 def update_monitor_data(monitor_wb, opportunities):
