@@ -8,7 +8,7 @@
 
 The investment process relies on a detailed **Portfolio Management Plan** and individual **Excel-based Valuation Models** for each potential stock investment. The core workflow involves:
 
-1.  Maintaining numerous individual Valuation Model spreadsheets, each containing detailed financial analysis, assumptions, and calculated outputs like `Market Annual Return`.
+1.  Maintaining numerous individual Valuation Model spreadsheets, each containing detailed financial analysis, assumptions, and calculated outputs like Market Annual Return.
 2.  Manually extracting key data points from these individual models.
 3.  Consolidating this data into a central monitoring spreadsheet.
 4.  Applying a complex set of rules defined in the Portfolio Management Plan (including benchmark comparisons, diversification limits, risk appetite scores, and allocation logic) to determine portfolio weights.
