@@ -21,7 +21,7 @@ thesis_pos = {
     # Calculate Stable Income Value Section
     "base_equity_cost": "C67",
     # Scenario Analysis Section
-    "expected_equity_value": "C112"
+    "expected_equity_value": "C113"
 }
 
 data_pos = {
@@ -35,10 +35,11 @@ data_pos = {
     "income_tax": "C14:M14", "net_income": "C15:M15", "nc_income": "C16:M16",
     # Cash Flow Statement
     "da": "C19:M19", "capex": "C20:M20", "wcinv": "C21:M21",
-    "dividend_per_share": "C22:M22",
+    "cfo": "C22:M22", "cfi": "C23:M23", "cff": "C24:M24",
+    "dividend_per_share": "C25:M25",
     # Balance Sheet
-    "Account_receivable": "C25:M25", "inventory": "C26:M26",
-    "total_liabilities": "C27:M27", "total_equity": "C28:M28", "nc_interest": "C29:M29"
+    "Account_receivable": "C28:M28", "inventory": "C29:M29",
+    "total_liabilities": "C30:M30", "total_equity": "C31:M31", "nc_interest": "C32:M32"
 }
 
 user_data_pos = {
