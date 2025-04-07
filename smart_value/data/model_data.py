@@ -38,8 +38,8 @@ data_pos = {
     "cfo": "C22:M22", "cfi": "C23:M23", "cff": "C24:M24",
     "dividend_per_share": "C25:M25",
     # Balance Sheet
-    "Account_receivable": "C28:M28", "inventory": "C29:M29",
-    "total_liabilities": "C30:M30", "total_equity": "C31:M31", "nc_interest": "C32:M32"
+    "Account_receivable": "D28:M28", "inventory": "D29:M29",
+    "total_liabilities": "D30:M30", "total_equity": "D31:M31", "nc_interest": "D32:M32"
 }
 
 user_data_pos = {
