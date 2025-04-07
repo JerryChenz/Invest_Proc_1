@@ -1,12 +1,12 @@
 """This file records the positions/headers in the stock monitor."""
 
 market_yield_pos = {
-    "us_riskfree": "C8",
-    "us_prime": "D8",
-    "cn_riskfree": "C9",
-    "cn_prime": "D9",
-    "hk_riskfree": "C10",
-    "hk_prime": "D10"
+    "us_riskfree": "C4",
+    "us_prime": "D4",
+    "cn_riskfree": "C5",
+    "cn_prime": "D5",
+    "hk_riskfree": "C6",
+    "hk_prime": "D6"
 }
 
 portfolio_mgmt_pos = {
