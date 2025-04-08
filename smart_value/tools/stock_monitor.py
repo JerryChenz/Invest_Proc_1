@@ -248,10 +248,12 @@ def update_monitor_data(monitor_wb, opportunities):
     if opportunities:
         try:
             last_data_row = start_row + len(opportunities) - 1
-            benchmark_ref = (monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["benchmark_return"]).
-                             get_address(row_absolute=True, column_absolute=True))
-            cash_yield_ref = monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["cash_yield"]).get_address(
-                row_absolute=True, column_absolute=True)
+            benchmark_ref = ("Portfolio_Mgmt!" +
+                             (monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["benchmark_return"]).
+                              get_address(row_absolute=True, column_absolute=True)))
+            cash_yield_ref = ("Portfolio_Mgmt!" +
+                              monitor_wb.sheets['Portfolio_Mgmt'].range(portfolio_mgmt_pos["cash_yield"]).
+                              get_address(row_absolute=True, column_absolute=True))
             erb_formula = f"=F{int(start_row)} - {benchmark_ref}"
             erc_formula = f"=F{int(start_row)} - {cash_yield_ref}"
             sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula
