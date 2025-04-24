@@ -1,10 +1,9 @@
 import os
 import shutil
-from yahooquery import Ticker
+import yfinance as yf
 import xlwings as xw
 from smart_value.tools.find_docs import get_template_paths, models_folder
 from smart_value.data.model_data import thesis_pos, data_pos
-
 
 def new_stock_model(ticker, comp_group=None):
     """Creates a new model if it doesn't already exist, then updates it."""
@@ -25,34 +24,32 @@ def new_stock_model(ticker, comp_group=None):
 
     update_new_model(ticker, model_name, model_path, comp_group)
 
-
 def update_new_model(ticker, model_name, model_path, comp_group=None):
-    """Updates the model with data fetched using yahooquery."""
+    """Updates the model with data fetched using yfinance."""
     print(f'Updating {model_name}...')
-    tkr = Ticker(ticker)
+    tkr = yf.Ticker(ticker)
 
-    # Fetch data from yahooquery
-    price_info = tkr.price.get(ticker, {})
-    summary_profile = tkr.summary_profile.get(ticker, {})
-    key_stats = tkr.key_stats.get(ticker, {})
-    financial_data = tkr.financial_data.get(ticker, {})
-    income_statement = tkr.income_statement(frequency='a').set_index('asOfDate').sort_index(ascending=False)
+    # Fetch data from yfinance
+    info = tkr.info
+    financials = tkr.financials
+    cashflow = tkr.cashflow
+    balance_sheet = tkr.balance_sheet
 
     # Extract necessary fields
-    name = summary_profile.get('name', ticker)
+    name = info.get('longName', ticker)
     symbol = ticker
-    price_value = price_info.get('regularMarketPrice')
-    price_currency = price_info.get('currency', 'USD')
-    shares_outstanding = key_stats.get('sharesOutstanding')
-    report_currency = financial_data.get('financialCurrency', price_currency)
+    price_value = info.get('regularMarketPrice')
+    price_currency = info.get('currency', 'USD')
+    shares_outstanding = info.get('sharesOutstanding')
+    report_currency = info.get('currency', 'USD')  # Assuming same as price currency
 
     # Calculate FX rate
     if price_currency == report_currency:
         fx_rate = 1.0
     else:
-        fx_ticker = f"{price_currency}{report_currency}=X"
-        fx_data = Ticker(fx_ticker).price.get(fx_ticker, {})
-        fx_rate = fx_data.get('regularMarketPrice', 1.0)
+        fx_ticker = f"{report_currency}{price_currency}=X"
+        fx_tkr = yf.Ticker(fx_ticker)
+        fx_rate = fx_tkr.info.get('regularMarketPrice', 1.0)
 
     with xw.App(visible=False) as app:
         model_xl = app.books.open(model_path)
@@ -73,40 +70,36 @@ def update_new_model(ticker, model_name, model_path, comp_group=None):
         # Update Data Sheet
         # Determine figure_in scaling factor
         figure_in_value = 1000  # Default to thousands
-        if not income_statement.empty and 'TotalRevenue' in income_statement.columns:
-            latest_revenue = income_statement['TotalRevenue'].iloc[0]
+        if not financials.empty and 'Total Revenue' in financials.index:
+            latest_revenue = financials.loc['Total Revenue'].iloc[0]
             if abs(latest_revenue) >= 1_000_000:
                 figure_in_value = 1_000_000
         data_sheet.range(data_pos["figure_in"]).value = figure_in_value
 
-        # Fetch financial data
-        cash_flow = tkr.cash_flow(frequency='a').set_index('asOfDate').sort_index(ascending=False)
-        balance_sheet = tkr.balance_sheet(frequency='a').set_index('asOfDate').sort_index(ascending=False)
-
         # Mapping from data_pos keys to financial data columns
         financial_mapping = {
-            "sales": ('income_statement', 'TotalRevenue'),
-            "cogs": ('income_statement', 'CostOfRevenue'),
-            "opex": ('income_statement', 'OperatingExpenses'),
-            "selling_expenses": ('income_statement', 'SellingGeneralAndAdministrative'),
-            "research_development": ('income_statement', 'ResearchAndDevelopment'),
-            "jv_result": ('income_statement', 'NetIncomeFromContinuingOperations'),
-            "securities_income": ('income_statement', 'OtherNonOperatingIncomeExpenses'),
-            "property_income": ('income_statement', 'OperatingIncome'),
-            "interest_expense": ('income_statement', 'InterestExpense'),
-            "interest_income": ('income_statement', 'InterestIncome'),
-            "income_tax": ('income_statement', 'IncomeTaxExpense'),
-            "net_income": ('income_statement', 'NetIncome'),
-            "nc_income": ('income_statement', 'NetIncomeFromContinuingOperations'),
-            "da": ('cash_flow', 'DepreciationAmortization'),
-            "capex": ('cash_flow', 'CapitalExpenditure'),
-            "wcinv": ('cash_flow', 'ChangeInWorkingCapital'),
-            "dividend_per_share": ('cash_flow', 'DividendsPaid'),
-            "Account_receivable": ('balance_sheet', 'AccountsReceivable'),
+            "sales": ('financials', 'Total Revenue'),
+            "cogs": ('financials', 'Cost Of Revenue'),
+            "opex": ('financials', 'Total Operating Expenses'),
+            "selling_expenses": ('financials', 'Selling General Administrative'),
+            "research_development": ('financials', 'Research Development'),
+            "jv_result": ('financials', 'Net Income From Continuing Ops'),
+            "securities_income": ('financials', 'Other Income'),
+            "property_income": ('financials', 'Operating Income'),
+            "interest_expense": ('financials', 'Interest Expense'),
+            "interest_income": ('financials', 'Interest Income'),
+            "income_tax": ('financials', 'Income Tax Expense'),
+            "net_income": ('financials', 'Net Income'),
+            "nc_income": ('financials', 'Net Income From Continuing Ops'),
+            "da": ('cashflow', 'Depreciation'),
+            "capex": ('cashflow', 'Capital Expenditures'),
+            "wcinv": ('cashflow', 'Change In Working Capital'),
+            "dividend_per_share": ('cashflow', 'Dividends Paid'),
+            "Account_receivable": ('balance_sheet', 'Net Receivables'),
             "inventory": ('balance_sheet', 'Inventory'),
-            "total_liabilities": ('balance_sheet', 'TotalLiabilities'),
-            "total_equity": ('balance_sheet', 'TotalEquity'),
-            "nc_interest": ('balance_sheet', 'NoncontrollingInterest'),
+            "total_liabilities": ('balance_sheet', 'Total Liab'),
+            "total_equity": ('balance_sheet', 'Total Stockholder Equity'),
+            "nc_interest": ('balance_sheet', 'Minority Interest'),
         }
 
         # Update each data field
@@ -118,15 +111,19 @@ def update_new_model(ticker, model_name, model_path, comp_group=None):
                 continue
 
             source, column = financial_mapping[key]
-            df = income_statement if source == 'income_statement' else cash_flow if source == 'cash_flow' else balance_sheet
-
-            if df.empty:
+            if source == 'financials':
+                df = financials
+            elif source == 'cashflow':
+                df = cashflow
+            elif source == 'balance_sheet':
+                df = balance_sheet
+            else:
                 continue
 
-            try:
-                data = df[column].tolist()
-            except KeyError:
+            if df.empty or column not in df.index:
                 continue
+
+            data = df.loc[column].values.tolist()
 
             # Special handling for dividend_per_share
             if key == 'dividend_per_share':
