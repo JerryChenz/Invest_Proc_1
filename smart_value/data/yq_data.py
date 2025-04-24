@@ -1,6 +1,6 @@
 from yahooquery import Ticker
 import re
-
+import time
 
 def clean_hk_symbol(symbol):
     """Convert HK symbols to 4-digit format required by Yahoo.
@@ -11,25 +11,36 @@ def clean_hk_symbol(symbol):
         return f'{base}.HK'
     return symbol
 
-
-def get_price_dict(model_paths):
+def get_price_dict(model_paths, max_retries=3, wait_time=10 ):
     price_dict = {}
     for path in model_paths:
-        try:
-            if not re.search(r'Valuation\.xlsx$', str(path)):
-                continue
+        if not re.search(r'Valuation\.xlsx$', str(path)):
+            continue
 
-            # Extract symbol from file path
-            symbol_match = re.search(r'(\d{4})\.HK', str(path))
-            if not symbol_match:
-                continue
-            symbol = symbol_match.group(0)
-            yahoo_symbol = clean_hk_symbol(symbol)
+        # Extract symbol from file path
+        symbol_match = re.search(r'(\d{4})\.HK', str(path))
+        if not symbol_match:
+            continue
+        symbol = symbol_match.group(0)
+        yahoo_symbol = clean_hk_symbol(symbol)
 
-            ticker = Ticker(yahoo_symbol)
-            price_data = ticker.price
+        ticker = Ticker(yahoo_symbol)
 
-            # Check if price_data is a dictionary
+        # Retry logic for fetching price data
+        price_data = None
+        for attempt in range(max_retries):
+            try:
+                price_data = ticker.price
+                break  # Exit retry loop on success
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Attempt {attempt + 1} failed for {yahoo_symbol}: {str(e)}. Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Failed to fetch price for {yahoo_symbol} after {max_retries} attempts.")
+
+        # Process price data if fetch was successful
+        if price_data is not None:
             if isinstance(price_data, dict):
                 quote = price_data.get(yahoo_symbol, {})
             else:
@@ -40,8 +51,7 @@ def get_price_dict(model_paths):
                 price_dict[symbol] = quote['regularMarketPrice']
             else:
                 print(f"Price unavailable for {symbol} (Yahoo: {yahoo_symbol})")
-
-        except Exception as e:
-            print(f"Error processing {path}: {str(e)}")
+        else:
+            print(f"Skipping {symbol} due to fetch failure.")
 
     return price_dict
