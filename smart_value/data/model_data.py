@@ -20,11 +20,16 @@ thesis_pos = {
     "dividend_yield": "C59",
     # Calculate Stable Income Value Section
     "base_equity_cost": "C67",
+    # Adjusting for Financial Structure Section
+    "liabilities_equity": "C88",
+    "debt_equity": "C89",
+    "debt_ebit": "C90",
+    "realizable_value": "C104",
     # Scenario Analysis Section
-    "expected_equity_value": "C113",
+    "expected_equity_value": "C117",
     # Investment Decision Section
-    "target_price": 'C129',
-    "sell_price": "C135"
+    "target_price": 'C133',
+    "sell_price": "C139"
 }
 
 data_pos = {

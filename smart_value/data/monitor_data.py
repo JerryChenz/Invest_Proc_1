@@ -35,13 +35,17 @@ opportunities_headers = {
     "allocation_weight": "I",
     "target_price": "J",
     "expected_equity_value": "K",
-    "fcfe_yield": "L",
-    "dividend_yield": "M",
-    "comp_group": "N",
-    "growth_class": "O",
-    "update_after": "P",
-    "is_selected": "Q",
-    "sell_price": "R"
+    "sell_price": "L",
+    "fcfe_yield": "M",
+    "dividend_yield": "N",
+    "liabilities_equity": "O",
+    "debt_equity": "P",
+    "debt_ebit": "Q",
+    "realizable_value": "R",
+    "comp_group": "S",
+    "growth_class": "T",
+    "update_after": "U",
+    "is_selected": "V"
 }
 
 # start row of the Opportunities.
