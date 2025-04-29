@@ -105,7 +105,7 @@ def calculate_allocation_weights(monitor_wb, opportunities):
 
     Steps:
     1. Retrieve parameters (benchmark return, cash yield, max holdings, etc.).
-    2. Filter eligible opportunities (Selected Flag = True, ERB > 0).
+    2. Filter eligible opportunities (Selected Flag = 'Y', ERB > 0).
     3. Enforce max holdings and growth classification limits during selection.
     4. Calculate provisional weights (Single Investment Cap), delta adjustment, and allocation weights.
     5. Adjust allocations if total exceeds investable capital, respecting ERB ranking.
@@ -123,10 +123,10 @@ def calculate_allocation_weights(monitor_wb, opportunities):
     target_return = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value)
     min_cash_reserve = float(portfolio_mgmt_sheet.range(portfolio_mgmt_pos["min_cash_reserve"]).value)
 
-    # Filter eligible opportunities (Selected and ERB > 0)
+    # Filter eligible opportunities (Selected Flag = 'Y' and ERB > 0)
     eligible_opportunities = [
         opp for opp in opportunities
-        if getattr(opp, 'is_selected', False) and (getattr(opp, 'market_annual_return', 0) - benchmark_return) > 0
+        if getattr(opp, 'is_selected', '') == 'Y' and (getattr(opp, 'market_annual_return', 0) - benchmark_return) > 0
     ]
 
     # Enforce max holdings and growth classification limits during selection
