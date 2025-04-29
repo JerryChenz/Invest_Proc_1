@@ -292,6 +292,7 @@ def update_market_data(monitor_path, model_paths):
             portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
             equity_cost = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["equity_cost"]).value
             target_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value
+            cash_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value
             holding_period = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["holding_period"]).value
             monitor_wb.save()
             monitor_wb.close()
@@ -325,6 +326,7 @@ def update_market_data(monitor_path, model_paths):
                 # Update market yield assumptions
                 thesis_sheet.range(thesis_pos["target_return"]).value = target_return
                 thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
+                thesis_sheet.range(thesis_pos["cash_yield"]).value = cash_yield
                 thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
 
                 model_wb.save()

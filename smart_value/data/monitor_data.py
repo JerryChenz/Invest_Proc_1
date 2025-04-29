@@ -40,7 +40,8 @@ opportunities_headers = {
     "comp_group": "N",
     "growth_class": "O",
     "update_after": "P",
-    "is_selected": "Q"
+    "is_selected": "Q",
+    "sell_price": "R"
 }
 
 # start row of the Opportunities.

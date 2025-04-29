@@ -12,7 +12,7 @@ thesis_pos = {
     "report_currency": "C16", "fx_rate": "C17",
     "comp_group": "C18",
     "target_return": "C19",
-    "target_price": 'C20',
+    "cash_yield": 'E19',
     "holding_period": "E20",
     "market_annual_return": "C21",
     # Calculate FCFE Section
@@ -21,7 +21,10 @@ thesis_pos = {
     # Calculate Stable Income Value Section
     "base_equity_cost": "C67",
     # Scenario Analysis Section
-    "expected_equity_value": "C113"
+    "expected_equity_value": "C113",
+    # Investment Decision Section
+    "target_price": 'C129',
+    "sell_price": "C135"
 }
 
 data_pos = {
