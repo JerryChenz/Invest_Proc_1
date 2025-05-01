@@ -68,13 +68,13 @@ def update_new_model(ticker, model_name, model_path, comp_group=None):
         thesis_sheet.range(thesis_pos["fx_rate"]).value = fx_rate
 
         # Update Data Sheet
-        # Determine figure_in scaling factor
-        figure_in_value = 1000  # Default to thousands
+        # Determine scaling factor
+        scaling_factor_value = 1000  # Default to thousands
         if not financials.empty and 'Total Revenue' in financials.index:
             latest_revenue = financials.loc['Total Revenue'].iloc[0]
             if abs(latest_revenue) >= 1_000_000:
-                figure_in_value = 1_000_000
-        data_sheet.range(data_pos["figure_in"]).value = figure_in_value
+                scaling_factor_value = 1_000_000
+        data_sheet.range(data_pos["scaling_factor"]).value = scaling_factor_value
 
         # Mapping from data_pos keys to financial data columns
         financial_mapping = {
@@ -104,7 +104,7 @@ def update_new_model(ticker, model_name, model_path, comp_group=None):
 
         # Update each data field
         for key, range_ref in data_pos.items():
-            if key in ['date_of_last_annual_report', 'figure_in']:
+            if key in ['date_of_last_annual_report', 'scaling_factor']:
                 continue
 
             if key not in financial_mapping:
@@ -128,12 +128,12 @@ def update_new_model(ticker, model_name, model_path, comp_group=None):
             # Special handling for dividend_per_share
             if key == 'dividend_per_share':
                 if shares_outstanding and data:
-                    data = [abs(d) / shares_outstanding for d in data]  # No figure_in scaling
+                    data = [abs(d) / shares_outstanding for d in data]  # No scaling factor
                 else:
                     data = []
             else:
-                # Apply figure_in scaling to totals
-                data = [d / figure_in_value for d in data]
+                # Apply scaling factor to totals
+                data = [d / scaling_factor_value for d in data]
 
             # Write to Excel
             start_cell = range_ref.split(':')[0]

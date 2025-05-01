@@ -34,7 +34,7 @@ thesis_pos = {
 
 data_pos = {
     # Income Statement
-    "date_of_last_annual_report": "C1", "figure_in": "C3",
+    "date_of_last_annual_report": "C1", "scaling_factor": "C3",
     "sales": "C4:M4", "cogs": "C5:M5",
     "opex": "C6:M6", "selling_expenses": "C7:M7",
     "research_development": "C8:M8", "jv_result": "C9:M9",
