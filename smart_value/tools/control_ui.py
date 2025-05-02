@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from smart_value.tools import model_update, stock_monitor
 from smart_value.tools.model_new import new_stock_model
+from smart_value.tools.find_docs import models_folder
+import os
+import subprocess
 
 
 def update_model(root, status_var):
@@ -105,5 +108,26 @@ def invest_proc():
 
     # Status Bar
     ttk.Label(status_frame, textvariable=status_var, style='Status.TLabel').pack(side='right')
+
+    # Open Models Folder Button
+    button_frame = ttk.Frame(main_container)
+    button_frame.pack(side='bottom', fill='x', pady=10)
+
+    def open_models_folder():
+        path = models_folder.resolve()
+        try:
+            if os.name == 'nt':
+                os.startfile(str(path))
+            elif os.name == 'posix':
+                if hasattr(os, 'uname') and os.uname().sysname == 'Darwin':
+                    subprocess.run(['open', str(path)])
+                else:
+                    subprocess.run(['xdg-open', str(path)])
+            else:
+                messagebox.showwarning("Unsupported OS", "Opening folders is not supported on this OS.", parent=root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open folder: {e}", parent=root)
+
+    ttk.Button(button_frame, text="Open Models Folder", command=open_models_folder).pack(expand=True, anchor='center')
 
     root.mainloop()
