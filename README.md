@@ -78,4 +78,12 @@ This Python project was developed to automate and streamline the investment work
     *   **Simple Monitor Update:** Run the monitor script (`stock_monitor.py`) skipping market data updates (faster).
     *   **Create Model:** Generate a new valuation model file for a specified stock symbol.
 
+## Installation
+1. **Install Python Dependencies:**
+   ```bash
+   pip install xlwings pandas yfinance openpyxl tqdm requests python-dotenv tk
+2. **Install Python Dependencies:**
+    ```bash
+   python -m PyInstaller invest_proc_main.py --onefile
+   
 ---
