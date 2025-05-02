@@ -128,6 +128,6 @@ def invest_proc():
         except Exception as e:
             messagebox.showerror("Error", f"Could not open folder: {e}", parent=root)
 
-    ttk.Button(button_frame, text="Open Models Folder", command=open_models_folder).pack(expand=True, anchor='center')
+    ttk.Button(button_frame, text="Open Opportunities Folder", command=open_models_folder).pack(expand=True, anchor='center')
 
     root.mainloop()
