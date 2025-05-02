@@ -82,7 +82,7 @@ This Python project was developed to automate and streamline the investment work
 1. **Install Python Dependencies:**
    ```bash
    pip install xlwings pandas yfinance openpyxl tqdm requests python-dotenv tk
-2. **Install Python Dependencies:**
+2. **(Optional) Build Standalone Executable**
     ```bash
    python -m PyInstaller invest_proc_main.py --onefile
    
