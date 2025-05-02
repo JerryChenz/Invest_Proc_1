@@ -19,6 +19,7 @@ portfolio_mgmt_pos = {
     "target_return": "C35",
     "holding_period": "E35",
     "equity_cost": "C36",
+    "position_yield": "E36",
     "min_cash_reserve": "E61",
     "projected_cash": "C111",
     "projected_portfolio_return": "C112",

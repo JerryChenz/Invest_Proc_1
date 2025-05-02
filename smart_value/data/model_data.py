@@ -12,7 +12,7 @@ thesis_pos = {
     "report_currency": "C16", "fx_rate": "C17",
     "comp_group": "C18",
     "target_return": "C19",
-    "cash_yield": 'E19',
+    "position_yield": 'E19',
     "holding_period": "E20",
     "market_annual_return": "C21",
     # Calculate FCFE Section

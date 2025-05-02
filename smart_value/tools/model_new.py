@@ -5,6 +5,7 @@ import xlwings as xw
 from smart_value.tools.find_docs import get_template_paths, models_folder
 from smart_value.data.model_data import thesis_pos, data_pos
 
+
 def new_stock_model(ticker, comp_group=None):
     """Creates a new model if it doesn't already exist, then updates it."""
     template_path_list = get_template_paths()
@@ -23,6 +24,7 @@ def new_stock_model(ticker, comp_group=None):
         print(f"Using existing model: {model_name}")
 
     update_new_model(ticker, model_name, model_path, comp_group)
+
 
 def update_new_model(ticker, model_name, model_path, comp_group=None):
     """Updates the model with data fetched using yfinance."""
