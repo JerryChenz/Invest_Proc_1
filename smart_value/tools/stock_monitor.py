@@ -281,7 +281,7 @@ def update_market_data(monitor_path, model_paths):
     # Initialize model assumption variables to None in case retrieval fails
     equity_cost = None
     target_return = None
-    position_yield = None
+    entry_yield = None
     holding_period = None
 
     # Update market yields and retrieve assumptions
@@ -299,7 +299,7 @@ def update_market_data(monitor_path, model_paths):
             portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
             equity_cost = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["equity_cost"]).value
             target_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value
-            position_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["position_yield"]).value
+            entry_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["entry_yield"]).value
             holding_period = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["holding_period"]).value
             monitor_wb.save()
             monitor_wb.close()
@@ -348,8 +348,8 @@ def update_market_data(monitor_path, model_paths):
                     thesis_sheet.range(thesis_pos["target_return"]).value = target_return
                 if holding_period is not None:
                     thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
-                if position_yield is not None:
-                    thesis_sheet.range(thesis_pos["position_yield"]).value = position_yield
+                if entry_yield is not None:
+                    thesis_sheet.range(thesis_pos["entry_yield"]).value = entry_yield
                 if equity_cost is not None:
                     thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
 

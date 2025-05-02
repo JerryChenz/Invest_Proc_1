@@ -19,7 +19,7 @@ portfolio_mgmt_pos = {
     "target_return": "C35",
     "holding_period": "E35",
     "equity_cost": "C36",
-    "position_yield": "E36",
+    "entry_yield": "E36",
     "min_cash_reserve": "E61",
     "projected_cash": "C111",
     "projected_portfolio_return": "C112",
@@ -36,17 +36,18 @@ opportunities_headers = {
     "allocation_weight": "I",
     "target_price": "J",
     "expected_equity_value": "K",
-    "sell_price": "L",
-    "fcfe_yield": "M",
-    "dividend_yield": "N",
-    "liabilities_equity": "O",
-    "debt_equity": "P",
-    "debt_ebit": "Q",
-    "realizable_value": "R",
-    "comp_group": "S",
-    "growth_class": "T",
-    "update_after": "U",
-    "is_selected": "V"
+    "entry_price": "L",
+    "sell_price": "M",
+    "fcfe_yield": "N",
+    "dividend_yield": "O",
+    "liabilities_equity": "P",
+    "debt_equity": "Q",
+    "debt_ebit": "R",
+    "realizable_value": "S",
+    "comp_group": "T",
+    "growth_class": "U",
+    "update_after": "V",
+    "is_selected": "W"
 }
 
 # start row of the Opportunities.
