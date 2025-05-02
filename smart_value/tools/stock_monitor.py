@@ -278,56 +278,80 @@ def update_market_data(monitor_path, model_paths):
     """
 
     print("Updating market yields...")
+    # Initialize model assumption variables to None in case retrieval fails
+    equity_cost = None
+    target_return = None
+    position_yield = None
+    holding_period = None
+
+    # Update market yields and retrieve assumptions
     try:
         us_riskfree = get_riskfree_rate("us")
         us_prime = get_us_prime_rate()
 
         with xw.App(visible=False) as app:
             monitor_wb = app.books.open(monitor_path)
-            # Update the market yields
+            # Update market yields
             market_yield_sheet = monitor_wb.sheets['Market_Yield']
             market_yield_sheet.range(market_yield_pos["us_riskfree"]).value = us_riskfree
             market_yield_sheet.range(market_yield_pos["us_prime"]).value = us_prime
-            # Retrieve the model assumptions
+            # Retrieve model assumptions
             portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
             equity_cost = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["equity_cost"]).value
             target_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value
-            cash_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["cash_yield"]).value
+            position_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["position_yield"]).value
             holding_period = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["holding_period"]).value
             monitor_wb.save()
             monitor_wb.close()
         print("Market yields updated successfully.")
     except Exception as e:
-        print(f"Error updating Market yields: {e}")
+        print(f"Error updating Market yields or retrieving assumptions: {e}")
 
-    # Retrieve the Forex rates and the market prices
-    forex_data = ForexData()
-    price_dict = get_price_dict(model_paths)
+    # Retrieve forex data, set to None if it fails
+    forex_data = None
+    try:
+        forex_data = ForexData()
+    except Exception as e:
+        print(f"Error retrieving Forex data: {e}")
 
-    # Update each model's market data and model assumptions
+    # Retrieve price dictionary, set to None if it fails
+    price_dict = None
+    try:
+        price_dict = get_price_dict(model_paths)
+    except Exception as e:
+        print(f"Error retrieving price dictionary: {e}")
+
+    # Update each model's market data and assumptions
     for path in model_paths:
         try:
-            with xw.App(visible=False) as app:  # New App context for each model
+            with xw.App(visible=False) as app:
                 model_wb = app.books.open(path)
                 thesis_sheet = model_wb.sheets['Thesis']
 
-                # Update market data
+                # Update market price only if price_dict is available
                 symbol = thesis_sheet.range(thesis_pos['symbol']).value
-                if symbol in price_dict:
+                if price_dict is not None and symbol in price_dict:
                     thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
 
-                # Update forex rate
+                # Update forex rate only if forex_data is available
                 price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
                 report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
-                if forex_data:
-                    fx_rate = forex_data.get_rate(report_currency, price_currency)
-                    thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
+                if forex_data is not None:
+                    try:
+                        fx_rate = forex_data.get_rate(report_currency, price_currency)
+                        thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
+                    except Exception as e:
+                        print(f"Error getting forex rate for {report_currency}/{price_currency} in {path}: {e}")
 
-                # Update market yield assumptions
-                thesis_sheet.range(thesis_pos["target_return"]).value = target_return
-                thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
-                thesis_sheet.range(thesis_pos["cash_yield"]).value = cash_yield
-                thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
+                # Update market yield assumptions only if they were retrieved
+                if target_return is not None:
+                    thesis_sheet.range(thesis_pos["target_return"]).value = target_return
+                if holding_period is not None:
+                    thesis_sheet.range(thesis_pos["holding_period"]).value = holding_period
+                if position_yield is not None:
+                    thesis_sheet.range(thesis_pos["position_yield"]).value = position_yield
+                if equity_cost is not None:
+                    thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
 
                 model_wb.save()
                 model_wb.close()
