@@ -1,4 +1,4 @@
-yfinance~=0.2.55
+yfinance~=0.2.59
 yahooquery~=2.3.7
 fredapi~=0.5.2
 alpha_vantage~=3.0.0
