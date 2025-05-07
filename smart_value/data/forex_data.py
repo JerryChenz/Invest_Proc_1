@@ -74,11 +74,12 @@ class ForexData:
                 )
                 rate = float(data['5. Exchange Rate'])
             except Exception as e:
-                print(f"Alpha Vantage failed for {from_currency}{to_currency}: {str(e)}")
+                print(f"Alpha Vantage failed: retry with yfinance for {from_currency}{to_currency}: {str(e)}")
                 try:
                     rate = get_rate_from_yfinance(from_currency, to_currency)
+                    print(f"yfinance succeeded at {from_currency}{to_currency}")
                 except Exception as e:
-                    print(f"yfinance failed for {from_currency}{to_currency}: {str(e)}")
+                    print(f"Forex update failed: Use fallback rates for {from_currency}{to_currency}: {str(e)}")
                     rate = get_fallback_rate(from_currency, to_currency)
         else:
             # Calculate cross rate via USD
