@@ -20,3 +20,23 @@ def get_price_yfinance(symbol):
     except Exception as e:
         print(f"Error fetching price for {symbol} with yfinance: {e}")
         return None
+
+
+def get_rate_from_yfinance(from_currency, to_currency):
+    ticker_direct = f"{from_currency}{to_currency}=X"
+    ticker_inverse = f"{to_currency}{from_currency}=X"
+    try:
+        data = yf.Ticker(ticker_direct)
+        hist = data.history(period="1d")
+        if not hist.empty:
+            rate = hist['Close'].iloc[-1]
+            return rate
+        # Try inverse
+        data = yf.Ticker(ticker_inverse)
+        hist = data.history(period="1d")
+        if hist.empty:
+            raise ValueError(f"No data for {ticker_direct} or {ticker_inverse}")
+        rate = 1 / hist['Close'].iloc[-1]
+        return rate
+    except Exception as e:
+        raise ValueError(f"Failed to get rate from yfinance for {from_currency}{to_currency}: {str(e)}")

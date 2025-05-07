@@ -1,8 +1,7 @@
 import os
-import time
 from datetime import datetime, timedelta
 from alpha_vantage.foreignexchange import ForeignExchange
-import yfinance as yf
+from smart_value.data.yf_data import get_rate_from_yfinance
 
 
 def get_fallback_rate(from_currency, to_currency):
@@ -16,26 +15,6 @@ def get_fallback_rate(from_currency, to_currency):
         'HKDUSD': 1 / 7.8
     }
     return fallback_rates.get(f"{from_currency}{to_currency}", 1.0)
-
-
-def get_rate_from_yfinance(from_currency, to_currency):
-    ticker_direct = f"{from_currency}{to_currency}=X"
-    ticker_inverse = f"{to_currency}{from_currency}=X"
-    try:
-        data = yf.Ticker(ticker_direct)
-        hist = data.history(period="1d")
-        if not hist.empty:
-            rate = hist['Close'].iloc[-1]
-            return rate
-        # Try inverse
-        data = yf.Ticker(ticker_inverse)
-        hist = data.history(period="1d")
-        if hist.empty:
-            raise ValueError(f"No data for {ticker_direct} or {ticker_inverse}")
-        rate = 1 / hist['Close'].iloc[-1]
-        return rate
-    except Exception as e:
-        raise ValueError(f"Failed to get rate from yfinance for {from_currency}{to_currency}: {str(e)}")
 
 
 class ForexData:
