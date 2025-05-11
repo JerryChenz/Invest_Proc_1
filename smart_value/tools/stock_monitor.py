@@ -236,7 +236,7 @@ def update_monitor_data(monitor_wb, opportunities):
     # Clear old data
     buffer = 100  # Extra rows to ensure all old data is cleared
     last_row = start_row + buffer - 1
-    sheet.range(f"B{start_row}:Q{last_row}").clear_contents()
+    sheet.range(f"B{start_row}:W{last_row}").clear_contents()
 
     # Write new data
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
