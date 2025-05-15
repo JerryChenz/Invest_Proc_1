@@ -10,11 +10,11 @@ thesis_pos = {
     "symbol": "C11",
     "price": "C12",  # Aka. Market Price
     "price_currency": "C13",  # Aka. Market Currency
-    "fx_rate": "C14",
+    "fx_rate": "C16",
     "symbol_secondary": "D11",
     "price_secondary": "D12",
     "price_currency_secondary": "D13",
-    "fx_rate_secondary": "D14",
+    "fx_rate_secondary": "D16",
     # Valuation Overview Section
     "growth_class": "C21",
     "report_currency": "C22",
