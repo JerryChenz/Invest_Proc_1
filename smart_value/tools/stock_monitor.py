@@ -236,7 +236,7 @@ def update_monitor_data(monitor_wb, opportunities):
     # Clear old data
     buffer = 100  # Extra rows to ensure all old data is cleared
     last_row = start_row + buffer - 1
-    sheet.range(f"B{start_row}:W{last_row}").clear_contents()
+    sheet.range(f"B{start_row}:X{last_row}").clear_contents()
 
     # Write new data
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
@@ -283,6 +283,7 @@ def update_market_data(monitor_path, model_paths):
     target_return = None
     entry_yield = None
     holding_period = None
+    benchmark_return = None
 
     # Update market yields and retrieve assumptions
     try:
@@ -301,6 +302,7 @@ def update_market_data(monitor_path, model_paths):
             target_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["target_return"]).value
             entry_yield = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["entry_yield"]).value
             holding_period = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["holding_period"]).value
+            benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos["benchmark_return"]).value
             monitor_wb.save()
             monitor_wb.close()
         print("Market yields updated successfully.")
@@ -352,6 +354,8 @@ def update_market_data(monitor_path, model_paths):
                     thesis_sheet.range(thesis_pos["entry_yield"]).value = entry_yield
                 if equity_cost is not None:
                     thesis_sheet.range(thesis_pos["base_equity_cost"]).value = equity_cost
+                if benchmark_return is not None:
+                    thesis_sheet.range(thesis_pos["benchmark_return"]).value = benchmark_return
 
                 model_wb.save()
                 model_wb.close()

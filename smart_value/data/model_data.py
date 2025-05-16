@@ -21,7 +21,8 @@ thesis_pos = {
     "comp_group": "C23",
     "target_return": "C24", "entry_yield": 'E24',
     "holding_period": "E25",
-    "market_annual_return": "C26",  # Aka. Market Implied Annual Return
+    "market_annual_return": "C26", # Aka. Market Implied Annual Return
+    "benchmark_return": "E26",
     # Calculate FCFE Section
     "fcfe_yield": "C63",
     "dividend_yield": "C64",
@@ -38,6 +39,7 @@ thesis_pos = {
     "target_price": 'C139',
     "entry_price": 'C147',
     "sell_price": "C155",
+    "exit_price": "C163",
     "target_price_secondary": 'C139',
     "entry_price_secondary": 'C147',
     "sell_price_secondary": "C155"
@@ -68,7 +70,7 @@ user_data_pos = {
         "C11:D13",
         "C16:D16",
         "C22:C24",
-        "E24:E25",
+        "E24:E26",
         "C72", "D73:D74",
         "D73:D74"
     ],
