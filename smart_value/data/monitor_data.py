@@ -10,8 +10,8 @@ market_yield_pos = {
 }
 
 portfolio_mgmt_pos = {
-    "benchmark_return": "C10",
-    "cash_yield": "C11",
+    "benchmark_return": "$C$10",
+    "cash_yield": "$C$11",
     "max_holdings": "C27",
     "single_investment_cap": "C28",
     "negative_low_growth": "C31",

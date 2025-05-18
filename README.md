@@ -1,4 +1,4 @@
-# Invest_Proc_v4 - Portfolio Management & Valuation Automation Suite
+# Invest_Proc - Portfolio Management & Valuation Automation Suite
 
 **Brief Description:** This Python project automates key aspects of the investment workflow, integrating individual stock valuation models with a rule-based portfolio management plan, primarily interacting with Excel spreadsheets.
 

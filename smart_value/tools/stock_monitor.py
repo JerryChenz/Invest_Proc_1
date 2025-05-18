@@ -47,6 +47,7 @@ def update_monitor(skip=True):
 
     # Step 1: Update market yields and retrieve assumptions
     if not skip:
+        print("Connecting...")
         try:
             us_riskfree = get_riskfree_rate("us")
             us_prime = get_us_prime_rate()
