@@ -24,7 +24,6 @@ project_root = pathlib.Path.cwd().resolve()
 models_folder = project_root / 'financial_models' / 'opportunities'
 templates_folder = project_root / 'financial_models' / 'templates'
 macro_monitor_file_path = project_root / 'financial_models' / 'Macro_Monitor.xlsx'
-stock_monitor_file_path = project_root / 'financial_models' / 'Stock_Monitor.xlsx'
 
 # Validation patterns
 MODEL_PATTERN = re.compile(
@@ -63,6 +62,11 @@ def get_template_paths():
             templates.append((version, f))
 
     return [t[1] for t in sorted(templates, reverse=True)]
+
+
+def get_monitor_path(portfolio_code):
+    """Return the monitor file path based on the portfolio code."""
+    return project_root / 'financial_models' / f'Stock_Monitor_{portfolio_code}.xlsx'
 
 
 def new_latest_model(ticker):
