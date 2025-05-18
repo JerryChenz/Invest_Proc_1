@@ -1,7 +1,9 @@
 """This file records the positions in the valuation model."""
 
 thesis_pos = {
-    "last_revision": "C1", "is_selected": "F1",
+    "last_revision": "C1",
+    "portfolio_code": "D1",
+    "is_selected": "F1",
     # Company Information Section
     "name": "C5",
     "shares_outstanding": "C6",
@@ -62,7 +64,7 @@ data_pos = {
 
 user_data_pos = {
     'Thesis': [
-        "C1", "F1",
+        "C1", "D1", "F1",
         "C5:D7",
         "C11:D13",
         "C16:D16",
