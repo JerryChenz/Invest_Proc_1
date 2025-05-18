@@ -17,7 +17,8 @@ thesis_pos = {
     "fx_rate_secondary": "D16",
     # Valuation Overview Section
     "growth_class": "C21",
-    "comp_group": "C22", "valuation_method": "E22",
+    "valuation_method": "E21",
+    "comp_group": "C22",
     "report_currency": "C25",
     "expected_equity_value": "C26",
     "market_annual_return": "E26",  # Aka. Market Implied Annual Return
@@ -65,7 +66,7 @@ user_data_pos = {
         "C5:D7",
         "C11:D13",
         "C16:D16",
-        "C22:C25", "E22",
+        "C22:C25", "E21:E22",
         "F28:F32"
     ],
     'Data': [
