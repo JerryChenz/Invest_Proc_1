@@ -17,32 +17,28 @@ thesis_pos = {
     "fx_rate_secondary": "D16",
     # Valuation Overview Section
     "growth_class": "C21",
-    "report_currency": "C22",
-    "comp_group": "C23",
-    "target_return": "C24", "entry_yield": 'E24',
-    "holding_period": "E25",
-    "market_annual_return": "C26", # Aka. Market Implied Annual Return
-    "benchmark_return": "E26",
+    "comp_group": "C22", "valuation_method": "E22",
+    "report_currency": "C25",
+    "expected_equity_value": "C26",
+    "market_annual_return": "E26",  # Aka. Market Implied Annual Return
+    # Valuation Outputs Section
+    "holding_period": "F28",
+    "target_price": 'C29', "target_price_secondary": 'D29',
+    "entry_price": 'C30', "entry_price_secondary": 'D30',
+    "sell_price": "C31", "sell_price_secondary": "D31",
+    "exit_price": "C32", "exit_price_secondary": "D32",
+    "target_return": "F29",
+    "entry_yield": 'F30',
+    "base_equity_cost": "F31",
+    "benchmark_return": "F32",
     # Calculate FCFE Section
-    "fcfe_yield": "C63",
-    "dividend_yield": "C64",
-    # Calculate Stable Income Value Section
-    "base_equity_cost": "C72",
+    "fcfe_yield": "C69",
+    "dividend_yield": "C70",
     # Adjusting for Financial Structure Section
-    "liabilities_equity": "C93",
-    "debt_equity": "C94",
-    "debt_ebit": "C95",
-    "realizable_value": "C109",
-    # Scenario Analysis Section
-    "expected_equity_value": "C122",
-    # Investment Decision Section
-    "target_price": 'C139',
-    "entry_price": 'C147',
-    "sell_price": "C155",
-    "exit_price": "C163",
-    "target_price_secondary": 'C139',
-    "entry_price_secondary": 'C147',
-    "sell_price_secondary": "C155"
+    "liabilities_equity": "C98",
+    "debt_equity": "C99",
+    "debt_ebit": "C100",
+    "realizable_value": "C114"
 }
 
 data_pos = {
@@ -69,10 +65,8 @@ user_data_pos = {
         "C5:D7",
         "C11:D13",
         "C16:D16",
-        "C22:C24",
-        "E24:E26",
-        "C72", "D73:D74",
-        "D73:D74"
+        "C22:C25", "E22",
+        "F28:F32"
     ],
     'Data': [
         "C1",
