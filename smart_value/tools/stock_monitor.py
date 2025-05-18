@@ -1,4 +1,4 @@
-"""stock_monitor.py - Excel Operations for Stock Monitor System
+"""stock_monitor.py - Excel Operations for Stock Monitor
 
 Purpose:
 Handles Excel-related operations for the stock monitor system using xlwings.

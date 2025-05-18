@@ -3,7 +3,7 @@
 Purpose:
 Handles portfolio allocation and management for the stock monitor system.
 Calculates allocation weights, filters eligible opportunities, and computes
-projected portfolio returns based on financial parameters.
+projected portfolio returns base on financial parameters.
 
 Key Features:
 1. Filters opportunities based on selection criteria and growth classifications.
