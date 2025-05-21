@@ -224,7 +224,7 @@ def update_monitor_data(monitor_wb, opportunities):
     opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
     buffer = 100
     last_row = start_row + buffer - 1
-    sheet.range(f"B{start_row}:X{last_row}").clear_contents()
+    sheet.range(f"B{start_row}:AA{last_row}").clear_contents()
 
     column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]

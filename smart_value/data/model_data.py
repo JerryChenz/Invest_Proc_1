@@ -37,11 +37,14 @@ thesis_pos = {
     # Calculate FCFE Section
     "fcfe_yield": "C69",
     "dividend_yield": "C70",
+    "roe": "C73",
+    "profit_sales": "C74",
+    "sales_assets": "C75",
+    "assets_equity": "C76",
     # Adjusting for Financial Structure Section
-    "liabilities_equity": "C98",
-    "debt_equity": "C99",
-    "debt_ebit": "C100",
-    "realizable_value": "C114"
+    "debt_equity": "C105",
+    "debt_ebit": "C106",
+    "realizable_value": "C120"
 }
 
 data_pos = {

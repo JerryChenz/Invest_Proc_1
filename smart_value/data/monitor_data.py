@@ -41,14 +41,17 @@ opportunities_headers = {
     "exit_price": "N",
     "fcfe_yield": "O",
     "dividend_yield": "P",
-    "liabilities_equity": "Q",
-    "debt_equity": "R",
-    "debt_ebit": "S",
-    "realizable_value": "T",
-    "comp_group": "U",
-    "growth_class": "V",
-    "update_after": "W",
-    "is_selected": "X"
+    "roe": "Q",
+    "profit_sales": "R",
+    "sales_assets": "S",
+    "assets_equity": "T",
+    "debt_equity": "U",
+    "debt_ebit": "V",
+    "realizable_value": "W",
+    "comp_group": "X",
+    "growth_class": "Y",
+    "update_after": "Z",
+    "is_selected": "AA"
 }
 
 # start row of the Opportunities.
