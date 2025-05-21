@@ -42,9 +42,9 @@ thesis_pos = {
     "sales_assets": "C75",
     "assets_equity": "C76",
     # Adjusting for Financial Structure Section
-    "debt_equity": "C105",
-    "debt_ebit": "C106",
-    "realizable_value": "C120"
+    "debt_equity": "C104",
+    "debt_ebit": "C105",
+    "realizable_value": "C119"
 }
 
 data_pos = {

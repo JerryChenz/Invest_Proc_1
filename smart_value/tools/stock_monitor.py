@@ -24,7 +24,7 @@ import xlwings as xw
 import pandas as pd
 from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
-from smart_value.tools.find_docs import get_model_paths, get_monitor_path
+from smart_value.tools.find_docs import get_model_paths, get_monitor_path, col_to_num
 from smart_value.data.model_data import thesis_pos
 from smart_value.data.monitor_data import (market_yield_pos, portfolio_mgmt_pos, opportunities_headers,
                                            opportunities_start_row)
@@ -206,18 +206,7 @@ class MonitorStock:
 
 
 def update_monitor_data(monitor_wb, opportunities):
-    """Update the Opportunities sheet with the latest opportunity data.
-
-    Args:
-        monitor_wb (xlwings.Book): The monitor workbook.
-        opportunities (list): List of MonitorStock objects with allocation_weight set.
-
-    Steps:
-    1. Sort opportunities by market_annual_return (descending).
-    2. Clear existing data in the specified range.
-    3. Write opportunity data to the sheet.
-    4. Set ERB and ERC formulas.
-    """
+    """Update the Opportunities sheet with the latest opportunity data."""
     sheet = monitor_wb.sheets['Opportunities']
     start_row = opportunities_start_row
 
@@ -226,7 +215,8 @@ def update_monitor_data(monitor_wb, opportunities):
     last_row = start_row + buffer - 1
     sheet.range(f"B{start_row}:AA{last_row}").clear_contents()
 
-    column_order = sorted(opportunities_headers.keys(), key=lambda x: opportunities_headers[x])
+    # Sort columns by numerical column position
+    column_order = sorted(opportunities_headers.keys(), key=lambda x: col_to_num(opportunities_headers[x]))
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
     sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df

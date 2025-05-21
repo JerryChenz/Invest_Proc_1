@@ -86,3 +86,11 @@ def new_latest_model(ticker):
 
     shutil.copy(templates[0], model_path)
     return model_path
+
+
+def col_to_num(col):
+    """Convert Excel column letter to its corresponding number (e.g., 'A' -> 1, 'AA' -> 27)."""
+    num = 0
+    for c in col:
+        num = num * 26 + (ord(c.upper()) - ord('A') + 1)
+    return num
