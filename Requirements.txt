@@ -4,3 +4,4 @@ fredapi~=0.5.2
 alpha_vantage~=3.0.0
 xlwings~=0.33.11
 pandas~=2.2.3
+numpy~=2.0.2
