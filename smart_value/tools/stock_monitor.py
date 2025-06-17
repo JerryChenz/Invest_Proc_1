@@ -22,6 +22,7 @@ Dependencies:
 
 import xlwings as xw
 import pandas as pd
+import os
 from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
 from smart_value.tools.find_docs import get_model_paths, get_monitor_path, col_to_num
@@ -231,4 +232,36 @@ def update_monitor_data(monitor_wb, opportunities):
         except Exception as e:
             print(f"Error setting formulas: {e}")
 
+    generate_monitor_md()
     print(f"Successfully updated {len(opportunities)} opportunities.")
+
+
+def generate_monitor_md():
+    """To read the "Opportunities" sheet from the Excel files "Stock_Monitor_INT.xlsx" and "Stock_Monitor_CN.xlsx",
+    extract specific columns, and generate a Markdown file for easy viewing"""
+
+    # Define the columns to extract from the Opportunities sheet
+    required_columns = ['Symbol', 'Name', 'Equity Value', 'Entry Price', 'Target Price', 'Exit Price', 'Sell Price']
+
+    # Get the directory from the INT monitor path (assuming both files are in the same folder)
+    directory = os.path.dirname(get_monitor_path("INT"))
+    output_md = os.path.join(directory, "Stock_Monitor.md")
+
+    # Open the Markdown file in write mode
+    with open(output_md, 'w') as f:
+        # Process both INT and CN monitors
+        for monitor in ["INT", "CN"]:
+            # Get the path to the Excel file
+            excel_path = get_monitor_path(monitor)
+
+            # Read the Opportunities sheet, using row 3 as the header (0-based index: header=2)
+            df = pd.read_excel(excel_path, sheet_name="Opportunities", header=2)
+
+            # Select only the required columns
+            df = df[required_columns]
+
+            # Write the monitor header to the Markdown file
+            f.write(f"## Stock Monitor {monitor}\n\n")
+
+            # Write the dataframe as a Markdown table
+            f.write(df.to_markdown(index=False) + "\n\n")
