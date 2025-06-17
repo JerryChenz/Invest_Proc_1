@@ -237,31 +237,30 @@ def update_monitor_data(monitor_wb, opportunities):
 
 
 def generate_monitor_md():
-    """To read the "Opportunities" sheet from the Excel files "Stock_Monitor_INT.xlsx" and "Stock_Monitor_CN.xlsx",
-    extract specific columns, and generate a Markdown file for easy viewing"""
-
-    # Define the columns to extract from the Opportunities sheet
+    """Generate a Markdown file from the Opportunities sheets of Stock_Monitor_INT.xlsx and Stock_Monitor_CN.xlsx."""
     required_columns = ['Symbol', 'Name', 'Equity Value', 'Entry Price', 'Target Price', 'Exit Price', 'Sell Price']
 
-    # Get the directory from the INT monitor path (assuming both files are in the same folder)
     directory = os.path.dirname(get_monitor_path("INT"))
+    print(directory)
     output_md = os.path.join(directory, "Stock_Monitor.md")
 
-    # Open the Markdown file in write mode
     with open(output_md, 'w') as f:
-        # Process both INT and CN monitors
         for monitor in ["INT", "CN"]:
-            # Get the path to the Excel file
             excel_path = get_monitor_path(monitor)
-
-            # Read the Opportunities sheet, using row 3 as the header (0-based index: header=2)
-            df = pd.read_excel(excel_path, sheet_name="Opportunities", header=2)
-
-            # Select only the required columns
-            df = df[required_columns]
-
-            # Write the monitor header to the Markdown file
-            f.write(f"## Stock Monitor {monitor}\n\n")
-
-            # Write the dataframe as a Markdown table
-            f.write(df.to_markdown(index=False) + "\n\n")
+            try:
+                df = pd.read_excel(excel_path, sheet_name="Opportunities", header=2)
+                # Normalize column names: replace newlines with spaces and strip
+                df.columns = df.columns.str.replace('\n', ' ').str.strip()
+                # Select available required columns
+                available_columns = [col for col in required_columns if col in df.columns]
+                df = df[available_columns]
+                # Drop rows with all NaN values
+                df = df.dropna(how='all')
+                # Write header and table
+                f.write(f"## Stock Monitor {monitor}\n\n")
+                f.write(df.to_markdown(index=False) + "\n\n")
+                print(f"Processed {monitor}: {len(df)} opportunities")
+            except FileNotFoundError:
+                print(f"Error: File not found - {excel_path}")
+            except Exception as e:
+                print(f"Error processing {excel_path}: {e}")
