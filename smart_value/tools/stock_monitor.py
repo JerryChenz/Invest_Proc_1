@@ -241,7 +241,6 @@ def generate_monitor_md():
     required_columns = ['Symbol', 'Name', 'Equity Value', 'Entry Price', 'Target Price', 'Exit Price', 'Sell Price']
 
     directory = os.path.dirname(get_monitor_path("INT"))
-    print(directory)
     output_md = os.path.join(directory, "Stock_Monitor.md")
 
     with open(output_md, 'w') as f:
