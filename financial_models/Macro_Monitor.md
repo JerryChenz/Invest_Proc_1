@@ -44,7 +44,7 @@
 - **HKDCNY**: [https://tradingeconomics.com/hkdcny:cur](https://tradingeconomics.com/hkdcny:cur)
 - **CADCNY**: [https://tradingeconomics.com/cadcny:cur](https://tradingeconomics.com/cadcny:cur)
 - **USDCAD**: [https://tradingeconomics.com/canada/currency](https://tradingeconomics.com/canada/currency)
-- **USDJPY**: [https://tradingeconomics.com/japan/currency](https://tradingeconomics.com/japan/currency) *(Note: Corrected from "USDJAY" in original data)*
+- **USDJPY**: [https://tradingeconomics.com/japan/currency](https://tradingeconomics.com/japan/currency)
 - **EURUSD**: [https://tradingeconomics.com/euro-area/currency](https://tradingeconomics.com/euro-area/currency)
 
 ---
@@ -116,7 +116,7 @@
 - **All-in-one Dashboard**: [https://tradingeconomics.com/commodities](https://tradingeconomics.com/commodities)
 - **Energy**
   - Crude oil: [https://tradingeconomics.com/commodity/crude-oil](https://tradingeconomics.com/commodity/crude-oil)
-  - Natural gas: [https://tradingeconomics.com/commodity/natural-gas](https://tradingeconomics.com/commodity/natural-gas) *(Note: Corrected from "Natural" in original data)*
+  - Natural gas: [https://tradingeconomics.com/commodity/natural-gas](https://tradingeconomics.com/commodity/natural-gas)
   - Coal: [https://tradingeconomics.com/commodity/coal](https://tradingeconomics.com/commodity/coal)
 - **Metals**
   - Gold: [https://tradingeconomics.com/commodity/gold](https://tradingeconomics.com/commodity/gold)
