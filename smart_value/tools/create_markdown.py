@@ -6,7 +6,6 @@ from smart_value.tools.find_docs import get_monitor_path
 
 def generate_monitor_md():
     """Generate a Markdown file from the Opportunities sheets of Stock_Monitor_INT.xlsx and Stock_Monitor_CN.xlsx."""
-
     # Define paths for the Excel files
     int_excel_path = get_monitor_path("INT")
     cn_excel_path = get_monitor_path("CN")
@@ -17,9 +16,7 @@ def generate_monitor_md():
 
     # Read data from both Excel files
     df_int = read_opportunities_sheet(int_excel_path)
-    print("International DataFrame:")
     df_cn = read_opportunities_sheet(cn_excel_path)
-    print("China DataFrame:")
 
     # Generate Markdown content
     md_content = "# Stock Opportunities\n\n"
@@ -39,7 +36,6 @@ def generate_monitor_md():
     with open(output_path, 'w', encoding='utf-8') as md_file:
         md_file.write(md_content)
 
-    print(f"Markdown file saved to: {output_path}")
     return output_path
 
 
@@ -62,6 +58,27 @@ def read_opportunities_sheet(file_path):
         )
         # Assign the 26 column names
         df.columns = list(opportunities_headers.keys())
+
+        # Define columns to format as numbers with 2 decimal places
+        value_cols = ['price', 'expected_equity_value', 'realizable_value']
+        # Define columns to format as percentages
+        percent_cols = [
+            'market_annual_return', 'ERB', 'ERC', 'allocation_weight',
+            'fcfe_yield', 'dividend_yield', 'roe', 'profit_sales',
+            'sales_assets', 'assets_equity', 'debt_equity', 'debt_ebit'
+        ]
+
+        # Format value columns: convert to numeric and round to 2 decimal places
+        for col in value_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').round(2)
+
+        # Format percentage columns: convert to numeric, multiply by 100, round to 2 decimal places, add % symbol
+        for col in percent_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce') * 100
+                df[col] = df[col].round(2).astype(str) + '%'
+
         # Remove rows where all elements are NaN
         df.dropna(how='all', inplace=True)
         return df
