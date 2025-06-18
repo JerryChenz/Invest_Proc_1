@@ -18,10 +18,8 @@ def generate_monitor_md():
     # Read data from both Excel files
     df_int = read_opportunities_sheet(int_excel_path)
     print("International DataFrame:")
-    print(df_int.to_string())
     df_cn = read_opportunities_sheet(cn_excel_path)
     print("China DataFrame:")
-    print(df_cn.to_string())
 
     # Generate Markdown content
     md_content = "# Stock Opportunities\n\n"
