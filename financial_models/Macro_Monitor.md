@@ -147,5 +147,3 @@
 - **Historical Returns**: [https://awealthofcommonsense.com/2025/01/historical-returns-for-stocks-bonds-cash-real-estate-and-gold/](https://awealthofcommonsense.com/2025/01/historical-returns-for-stocks-bonds-cash-real-estate-and-gold/)
 
 ---
-
-This Markdown file provides a comprehensive, navigable reference for macro and commodity indicators, with direct links to data sources and a detailed current environment assessment for China and the US.
