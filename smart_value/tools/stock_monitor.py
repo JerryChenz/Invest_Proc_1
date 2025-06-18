@@ -23,6 +23,8 @@ Dependencies:
 import xlwings as xw
 import pandas as pd
 import os
+
+import smart_value.tools.create_markdown
 from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
 from smart_value.tools.find_docs import get_model_paths, get_monitor_path, col_to_num
@@ -232,34 +234,5 @@ def update_monitor_data(monitor_wb, opportunities):
         except Exception as e:
             print(f"Error setting formulas: {e}")
 
-    generate_monitor_md()
+    smart_value.tools.create_markdown.generate_monitor_md()
     print(f"Successfully updated {len(opportunities)} opportunities.")
-
-
-def generate_monitor_md():
-    """Generate a Markdown file from the Opportunities sheets of Stock_Monitor_INT.xlsx and Stock_Monitor_CN.xlsx."""
-    required_columns = ['Symbol', 'Name', 'Equity Value', 'Entry Price', 'Target Price', 'Exit Price', 'Sell Price']
-
-    directory = os.path.dirname(get_monitor_path("INT"))
-    output_md = os.path.join(directory, "Stock_Monitor.md")
-
-    with open(output_md, 'w') as f:
-        for monitor in ["INT", "CN"]:
-            excel_path = get_monitor_path(monitor)
-            try:
-                df = pd.read_excel(excel_path, sheet_name="Opportunities", header=2)
-                # Normalize column names: replace newlines with spaces and strip
-                df.columns = df.columns.str.replace('\n', ' ').str.strip()
-                # Select available required columns
-                available_columns = [col for col in required_columns if col in df.columns]
-                df = df[available_columns]
-                # Drop rows with all NaN values
-                df = df.dropna(how='all')
-                # Write header and table
-                f.write(f"## Stock Monitor {monitor}\n\n")
-                f.write(df.to_markdown(index=False) + "\n\n")
-                print(f"Processed {monitor}: {len(df)} opportunities")
-            except FileNotFoundError:
-                print(f"Error: File not found - {excel_path}")
-            except Exception as e:
-                print(f"Error processing {excel_path}: {e}")
