@@ -27,8 +27,9 @@ def update_monitor_data(monitor_wb, opportunities):
 
     # Read parameters from Portfolio_Mgmt sheet
     benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['benchmark_return']).value
+    target_w = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_return']).value
     p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # Valuation confidence
-    l = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_loss']).value     # loss at Market Price if incorrect
+    target_l = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_loss']).value  # loss at Market Price if incorrect
 
     # Calculate allocation weights for each opportunity
     for opp in opportunities:
@@ -39,21 +40,24 @@ def update_monitor_data(monitor_wb, opportunities):
 
         # Ensure required values are available and price is below entry price
         if (market_annual_return is not None and
-            benchmark_return is not None and
-            p is not None and
-            l is not None and
-            price is not None and
-            entry_price is not None and
-            price < entry_price):
+                benchmark_return is not None and
+                target_w is not None and
+                p is not None and
+                price is not None and
+                entry_price is not None and
+                price < entry_price):
             erb = market_annual_return - benchmark_return
-            # Check eligibility: Selected Flag = 'Y' and ERB > 0
-            if is_selected == 'Y' and erb > 0:
-                w = market_annual_return  # Use market_annual_return as expected return
+            # Check eligibility: ERB > 0
+            if erb > 0:
+                opp_w = market_annual_return  # Use market_annual_return as expected return
+                opp_l = target_l + (market_annual_return - target_w)
                 # Avoid division by zero
-                if w != 0:
-                    hk_allocation = (p * w + (1 - p) * l) / (2 * w)
-                    # Scale by 2/3 to match expected weights and ensure non-negative
-                    opp.allocation_weight = max(hk_allocation * (2/3), 0)
+                if opp_w != 0:
+                    hk_allocation = (p * opp_w + (1 - p) * opp_l) / (2 * opp_w)
+                    # ensure non-negative
+                    opp.allocation_weight = max(hk_allocation, 0)
+                    if is_selected == 'N':
+                        opp.allocation_weight = hk_allocation/2
                 else:
                     opp.allocation_weight = 0
             else:
