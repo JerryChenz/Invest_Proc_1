@@ -21,18 +21,13 @@ Dependencies:
 """
 
 import xlwings as xw
-import pandas as pd
-import os
-
-import smart_value.tools.create_markdown
 from smart_value.data.forex_data import ForexData
 from smart_value.data.yq_data import get_price_dict
-from smart_value.tools.find_docs import get_model_paths, get_monitor_path, col_to_num
+from smart_value.tools.find_docs import get_model_paths, get_monitor_path
 from smart_value.data.model_data import thesis_pos
-from smart_value.data.monitor_data import (market_yield_pos, portfolio_mgmt_pos, opportunities_headers,
-                                           opportunities_start_row)
+from smart_value.data.monitor_data import (market_yield_pos, portfolio_mgmt_pos, opportunities_headers)
 from smart_value.data.fred_data import get_riskfree_rate, get_us_prime_rate
-from smart_value.tools.portfolio_management import calculate_allocation_weights
+from smart_value.tools.portfolio_management import update_monitor_data
 
 
 def update_monitor(skip=True):
@@ -162,7 +157,6 @@ def update_monitor(skip=True):
         print(f"Updating monitor file for {portfolio_code}...")
         with xw.App(visible=False) as app:
             monitor_wb = app.books.open(monitor_path)
-            calculate_allocation_weights(monitor_wb, opportunities_dict[portfolio_code])
             update_monitor_data(monitor_wb, opportunities_dict[portfolio_code])
             monitor_wb.save()
             monitor_wb.close()
@@ -206,33 +200,3 @@ class MonitorStock:
             except Exception as e:
                 print(f"Warning: Could not set attribute {attr}: {str(e)}")
                 setattr(self, attr, None)
-
-
-def update_monitor_data(monitor_wb, opportunities):
-    """Update the Opportunities sheet with the latest opportunity data."""
-    sheet = monitor_wb.sheets['Opportunities']
-    start_row = opportunities_start_row
-
-    opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
-    buffer = 100
-    last_row = start_row + buffer - 1
-    sheet.range(f"B{start_row}:AA{last_row}").clear_contents()
-
-    # Sort columns by numerical column position
-    column_order = sorted(opportunities_headers.keys(), key=lambda x: col_to_num(opportunities_headers[x]))
-    data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
-    df = pd.DataFrame(data, columns=column_order)
-    sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df
-
-    if opportunities:
-        try:
-            last_data_row = start_row + len(opportunities) - 1
-            benchmark_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['benchmark_return']}"
-            cash_yield_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['cash_yield']}"
-            sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = f"=F{int(start_row)} - {benchmark_ref}"
-            sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = f"=F{int(start_row)} - {cash_yield_ref}"
-        except Exception as e:
-            print(f"Error setting formulas: {e}")
-
-    smart_value.tools.create_markdown.generate_monitor_md()
-    print(f"Successfully updated {len(opportunities)} opportunities.")
