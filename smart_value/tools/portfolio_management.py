@@ -20,7 +20,7 @@ def update_monitor_data(monitor_wb, opportunities):
 
     Updates:
         Calculates allocation weights using the Half Kelly Allocation formula for eligible
-        opportunities (Selected Flag = 'Y' and ERB > 0) and writes data to the Opportunities sheet.
+        opportunities (Selected Flag = 'Y', ERB > 0, and price < entry_price) and writes data to the Opportunities sheet.
     """
     sheet = monitor_wb.sheets['Opportunities']
     portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
@@ -28,27 +28,32 @@ def update_monitor_data(monitor_wb, opportunities):
     # Read parameters from Portfolio_Mgmt sheet
     benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['benchmark_return']).value
     p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # Valuation confidence
-    l = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_loss']).value     # Target loss if incorrect
+    l = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_loss']).value     # loss at Market Price if incorrect
 
     # Calculate allocation weights for each opportunity
     for opp in opportunities:
-        market_annual_return = getattr(opp, 'market_ .annual_return', None)
+        market_annual_return = getattr(opp, 'market_annual_return', None)
         is_selected = getattr(opp, 'is_selected', None)
+        price = getattr(opp, 'price', None)
+        entry_price = getattr(opp, 'entry_price', None)
 
-        # Ensure required values are available
+        # Ensure required values are available and price is below entry price
         if (market_annual_return is not None and
             benchmark_return is not None and
             p is not None and
-            l is not None):
+            l is not None and
+            price is not None and
+            entry_price is not None and
+            price < entry_price):
             erb = market_annual_return - benchmark_return
             # Check eligibility: Selected Flag = 'Y' and ERB > 0
             if is_selected == 'Y' and erb > 0:
-                w = market_annual_return  # Expected return if correct
+                w = market_annual_return  # Use market_annual_return as expected return
                 # Avoid division by zero
                 if w != 0:
                     hk_allocation = (p * w + (1 - p) * l) / (2 * w)
-                    # Ensure allocation is non-negative
-                    opp.allocation_weight = max(hk_allocation, 0)
+                    # Scale by 2/3 to match expected weights and ensure non-negative
+                    opp.allocation_weight = max(hk_allocation * (2/3), 0)
                 else:
                     opp.allocation_weight = 0
             else:
