@@ -14,12 +14,11 @@ portfolio_mgmt_pos = {
     "cash_yield": "$C$11",
     "max_holdings": "C27",
     "single_investment_cap": "C28",
-    "target_return": "C31",
-    "target_loss": "C32", "correct_chance": "E32",
-    "entry_return": "C33",
-    "holding_period": "E34",
-    "equity_cost": "C35",
-    "min_cash_reserve": "E61"
+    "correct_chance": "C32", "incorrect_loss": "E32",
+    "target_return": "C33",
+    "entry_return": "C35",
+    "holding_period": "C37", "equity_cost": "E37",
+    "min_cash_reserve": "E66"
 }
 
 opportunities_headers = {

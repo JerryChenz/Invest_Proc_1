@@ -11,74 +11,86 @@ from smart_value.data.monitor_data import (portfolio_mgmt_pos, opportunities_hea
 import smart_value.tools.create_markdown
 
 
+def calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_loss):
+    """
+    Calculate the allocation weight for an opportunity using the Half Kelly Criterion.
+
+    Args:
+        opp: The opportunity object with stock data.
+        benchmark_return (float): The benchmark return rate (e.g., 11.74%).
+        p (float): Valuation confidence (probability of intrinsic value accuracy).
+        target_w (float): Expected return at target price when correct (e.g., 35%).
+        incorrect_loss (float): Expected loss at est. intrinsic value when incorrect.
+
+    Returns:
+        float: The allocation weight, or 0 if ineligible or calculation fails.
+    """
+    market_annual_return = getattr(opp, 'market_annual_return', None)
+    is_selected = getattr(opp, 'is_selected', None)
+    price = getattr(opp, 'price', None)
+    entry_price = getattr(opp, 'entry_price', None)
+
+    # Check if all required attributes are present and investment is eligible
+    if (market_annual_return is not None and
+        price is not None and
+        entry_price is not None and
+        price <= entry_price):
+        erb = market_annual_return - benchmark_return
+        if erb > 0:  # Eligibility: ERB > 0
+            w = market_annual_return  # Expected return at current market price
+            l = incorrect_loss + market_annual_return  # Loss at market price
+            if w != 0:  # Avoid division by zero
+                hk_allocation = (p * w + (1 - p) * l) / (2 * w)
+                allocation_weight = max(hk_allocation, 0)  # Ensure non-negative
+                if is_selected == 'N':
+                    allocation_weight /= 2  # 50% of normal allocation for non-selected
+                return allocation_weight
+    return 0
+
+
 def update_monitor_data(monitor_wb, opportunities):
-    """Update the Opportunities sheet with the latest opportunity data.
+    """
+    Update the Opportunities sheet with opportunity data and allocation weights.
 
     Args:
         monitor_wb (xlwings.Book): The monitor workbook object.
-        opportunities (list): List of MonitorStock objects containing opportunity data.
+        opportunities (list): List of MonitorStock objects with opportunity data.
 
-    Updates:
-        Calculates allocation weights using the Half Kelly Allocation formula for eligible
-        opportunities (Selected Flag = 'Y', ERB > 0, and price < entry_price) and writes data to the Opportunities sheet.
+    Process:
+        1. Retrieves portfolio parameters from Portfolio_Mgmt sheet.
+        2. Calculates allocation weights for each opportunity.
+        3. Writes sorted opportunity data to the Opportunities sheet.
+        4. Sets ERB and ERC formulas.
     """
+    # Access required sheets
     sheet = monitor_wb.sheets['Opportunities']
     portfolio_mgmt_sheet = monitor_wb.sheets['Portfolio_Mgmt']
 
-    # Read parameters from Portfolio_Mgmt sheet
+    # Retrieve parameters from Portfolio_Mgmt sheet
     benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['benchmark_return']).value
-    target_w = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_return']).value
-    p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # Valuation confidence
-    target_l = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_loss']).value  # loss at Market Price if incorrect
+    p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # e.g., 60%
+    target_w = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_return']).value  # e.g., 35%
+    incorrect_loss = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['incorrect_loss']).value  # e.g., -15%
 
-    # Calculate allocation weights for each opportunity
+    # Calculate allocation weights
     for opp in opportunities:
-        market_annual_return = getattr(opp, 'market_annual_return', None)
-        is_selected = getattr(opp, 'is_selected', None)
-        price = getattr(opp, 'price', None)
-        entry_price = getattr(opp, 'entry_price', None)
+        opp.allocation_weight = calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_loss)
 
-        # Ensure required values are available and price is below entry price
-        if (market_annual_return is not None and
-                benchmark_return is not None and
-                target_w is not None and
-                p is not None and
-                price is not None and
-                entry_price is not None and
-                price < entry_price):
-            erb = market_annual_return - benchmark_return
-            # Check eligibility: ERB > 0
-            if erb > 0:
-                opp_w = market_annual_return  # Use market_annual_return as expected return
-                opp_l = target_l + (market_annual_return - target_w)
-                # Avoid division by zero
-                if opp_w != 0:
-                    hk_allocation = (p * opp_w + (1 - p) * opp_l) / (2 * opp_w)
-                    # ensure non-negative
-                    opp.allocation_weight = max(hk_allocation, 0)
-                    if is_selected == 'N':
-                        opp.allocation_weight = hk_allocation/2
-                else:
-                    opp.allocation_weight = 0
-            else:
-                opp.allocation_weight = 0
-        else:
-            opp.allocation_weight = 0
-
-    # Prepare data for writing to the sheet
-    start_row = opportunities_start_row
+    # Sort opportunities by market_annual_return (equivalent to ERB descending)
     opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
+
+    # Prepare and write data to the sheet
+    start_row = opportunities_start_row
     buffer = 100
     last_row = start_row + buffer - 1
     sheet.range(f"B{start_row}:AA{last_row}").clear_contents()
 
-    # Sort columns by numerical column position
     column_order = sorted(opportunities_headers.keys(), key=lambda x: col_to_num(opportunities_headers[x]))
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
     sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df
 
-    # Set formulas for ERB and ERC columns
+    # Set ERB and ERC formulas if there are opportunities
     if opportunities:
         try:
             last_data_row = start_row + len(opportunities) - 1
@@ -89,5 +101,6 @@ def update_monitor_data(monitor_wb, opportunities):
         except Exception as e:
             print(f"Error setting formulas: {e}")
 
+    # Generate markdown and log completion
     smart_value.tools.create_markdown.generate_monitor_md()
     print(f"Successfully updated {len(opportunities)} opportunities.")
