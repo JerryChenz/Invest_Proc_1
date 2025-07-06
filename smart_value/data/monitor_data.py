@@ -16,7 +16,7 @@ portfolio_mgmt_pos = {
     "single_investment_cap": "C28",
     "correct_chance": "C32", "incorrect_loss": "E32",
     "target_return": "C33",
-    "entry_return": "C35",
+    "entry_yield": "C35",
     "holding_period": "C37", "equity_cost": "E37",
     "min_cash_reserve": "E66"
 }
