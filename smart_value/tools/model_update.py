@@ -1,13 +1,3 @@
-"""
-model_update.py - The script automates the process of updating Excel-based financial valuation models to new
-template versions while preserving user inputs. It handles:
-
-1. Template Migration: Transfers user data from old Excel models to new template versions
-2. Batch Processing: Updates multiple files efficiently
-3. Data Integrity: Maintains consistency and prevents data loss during updates
-"""
-
-import pathlib
 import time
 import xlwings as xw
 from smart_value.tools.find_docs import get_model_paths, new_latest_model
@@ -15,7 +5,17 @@ from smart_value.data.model_data import user_data_pos
 
 
 def update_models():
-    """Main update process with atomic file operations and rollback protection."""
+    """Main update process with atomic file operations and rollback protection.
+
+    This function automates the updating of Excel-based financial valuation models to new template versions.
+    It preserves user inputs and entire worksheets, such as "Breakdown", while maintaining data integrity.
+
+    Key Features:
+    1. Template Migration: Transfers user data from old Excel models to new template versions
+    2. Worksheet Copying: Copies entire worksheets, such as 'Breakdown', preserving formulas and formatting
+    3. Batch Processing: Updates multiple files efficiently
+    4. Data Integrity: Maintains consistency and prevents data loss during updates
+    """
     start_total = time.time()
     model_paths = get_model_paths()
     template_mapping = user_data_pos
@@ -39,7 +39,16 @@ def update_models():
                 old_book = app.books.open(backup)
                 new_book = app.books.open(updated_model)
 
-                # Batch input transfer
+                # Copy the entire 'Breakdown' sheet if it exists in the old workbook
+                if 'Breakdown' in old_book.sheet_names:
+                    # Remove existing 'Breakdown' sheet in new workbook if present
+                    if 'Breakdown' in new_book.sheet_names:
+                        new_book.sheets['Breakdown'].delete()
+                    # Copy 'Breakdown' from old workbook to new workbook
+                    old_sheet = old_book.sheets['Breakdown']
+                    old_sheet.api.Copy(Before=new_book.sheets[0].api)
+
+                # Transfer user data for other sheets
                 for sheet, ranges in template_mapping.items():
                     try:
                         old_sheet = old_book.sheets[sheet]
