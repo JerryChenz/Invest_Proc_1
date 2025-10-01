@@ -18,7 +18,7 @@ thesis_pos = {
     "growth_class": "C19",
     "fx_rate": "E16",
     "report_currency": "E17",
-    "update_after": "E18",
+    "update_after": "E19",
     # Price Target Section
     "target_price": 'C22',
     "entry_price": 'C23',
@@ -37,8 +37,8 @@ thesis_pos = {
     "sales_assets": "C68",
     "assets_equity": "C69",
     # Adjusting for Financial Structure Section
-    "debt_equity": "C81",
-    "debt_ebit": "C82",
+    "debt_equity": "C80",
+    "debt_ebit": "C81",
     "realizable_value": "C111"
 }
 
