@@ -1,50 +1,45 @@
 """This file records the positions in the valuation model."""
 
 thesis_pos = {
-    "last_revision": "C1",
-    "portfolio_code": "D1",
-    "is_selected": "F1",
+    # Model Information Section
+    "last_revision": "F3",
+    "portfolio_code": "F4",
+    "is_selected": "F5",
     # Company Information Section
-    "name": "C5",
-    "shares_outstanding": "C6",
-    "update_after": "C8",
-    # Listing Information Section
-    "symbol": "C11",
-    "price": "C12",  # Aka. Market Price
-    "price_currency": "C13",  # Aka. Market Currency
-    "fx_rate": "C16",
-    "symbol_secondary": "D11",
-    "price_secondary": "D12",
-    "price_currency_secondary": "D13",
-    "fx_rate_secondary": "D16",
-    # Valuation Overview Section
-    "growth_class": "C21",
-    "valuation_method": "E21",
-    "comp_group": "C22",
-    "report_currency": "C25",
-    "expected_equity_value": "C26",
-    "market_annual_return": "E26",  # Aka. Market Implied Annual Return
-    # Valuation Outputs Section
-    "holding_period": "F28",
-    "target_price": 'C29', "target_price_secondary": 'D29',
-    "entry_price": 'C30', "entry_price_secondary": 'D30',
-    "sell_price": "C31", "sell_price_secondary": "D31",
-    "exit_price": "C32", "exit_price_secondary": "D32",
-    "target_return": "F29",
-    "entry_yield": 'F30',
-    "base_equity_cost": "F31",
-    "benchmark_return": "F32",
+    "name": "C4",
+    "symbol": "C5",
+    "comp_group": "C6",
+    "price_currency": "C7",  # Aka. Market Currency
+    "price": "C8",  # Aka. Market Price
+    "market_annual_return": "E9",  # Aka. Market Implied Annual Return
+    "shares_outstanding": "C9",
+    # DCF Conclusion Section
+    "expected_equity_value": "C19",
+    "growth_class": "C19",
+    "fx_rate": "E16",
+    "report_currency": "E17",
+    "update_after": "E18",
+    # Price Target Section
+    "target_price": 'C22',
+    "entry_price": 'C23',
+    "exit_price": "C24",
+    "sell_price": "C25",
+    "holding_period": "E21",
+    "target_return": "E22",
+    "entry_yield": 'E23',
+    "benchmark_return": "E24",
+    "base_equity_cost": "E25",
     # Calculate FCFE Section
-    "fcfe_yield": "C69",
-    "dividend_yield": "C70",
-    "roe": "C73",
-    "profit_sales": "C74",
-    "sales_assets": "C75",
-    "assets_equity": "C76",
+    "fcfe_yield": "C62",
+    "dividend_yield": "C63",
+    "roe": "C66",
+    "profit_sales": "C67",
+    "sales_assets": "C68",
+    "assets_equity": "C69",
     # Adjusting for Financial Structure Section
-    "debt_equity": "C104",
-    "debt_ebit": "C105",
-    "realizable_value": "C119"
+    "debt_equity": "C81",
+    "debt_ebit": "C82",
+    "realizable_value": "C111"
 }
 
 data_pos = {
@@ -65,14 +60,14 @@ data_pos = {
     "total_liabilities": "D30:M30", "total_equity": "D31:M31", "nc_interest": "D32:M32"
 }
 
+
 user_data_pos = {
     'Thesis': [
-        "C1", "D1", "F1",
-        "C5:D7",
-        "C11:D13",
-        "C16:D16",
-        "C22:C25", "E21:E22",
-        "F28:F32"
+        "F3:F5",
+        "C4:D9",
+        "C15:C17",
+        "E16:E18",
+        "E21:E25"
     ],
     'Data': [
         "C1",
@@ -89,19 +84,16 @@ user_data_pos = {
     ],
     'Normalized_FCF': [
         "C4", "E3:E19",
-        "C28:C29", "C33:C34", "C43", "E22:E43",
-        "C53:C54", "C62", "C66:C68", "E46:E69",
-        "C78", "C83", "C85", "C90", "C93", "E72:E98"
+        "C29:C31", "C35", "C41", "E22:E41",
+        "C51:C52", "C60", "C64:C66", "E44:E67",
+        "C76", "C81", "C83", "C88", "C91", "E70:E96"
     ],
     'Scenarios': [
         "C4",
         "C18",
-        "C26", "C28", "E25",
-        "C32", "C34", "E31",
-        "C38", "E37",
-        "C46",
-        "C50", "C52", "E49",
-        "C56", "C58", "E55",
-        "C65"
+        "C22:C24", "F23:F24",
+        "C29:C30", "F29:F30",
+        "C40:C41",
+        "C46"
     ]
 }
