@@ -11,7 +11,7 @@ thesis_pos = {
     "comp_group": "C6",
     "price_currency": "C7",  # Aka. Market Currency
     "price": "C8",  # Aka. Market Price
-    "market_annual_return": "E9",  # Aka. Market Implied Annual Return
+    "market_annual_return": "E10",  # Aka. Market Implied Annual Return
     "shares_outstanding": "C9",
     # DCF Conclusion Section
     "expected_equity_value": "C19",
