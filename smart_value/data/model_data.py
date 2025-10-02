@@ -14,7 +14,7 @@ thesis_pos = {
     "market_annual_return": "E10",  # Aka. Market Implied Annual Return
     "shares_outstanding": "C9",
     # DCF Conclusion Section
-    "expected_equity_value": "C19",
+    "expected_equity_value": "C18",
     "growth_class": "C19",
     "fx_rate": "E16",
     "report_currency": "E17",
