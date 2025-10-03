@@ -39,15 +39,6 @@ def update_models():
                 old_book = app.books.open(backup)
                 new_book = app.books.open(updated_model)
 
-                # Copy the entire 'Breakdown' sheet if it exists in the old workbook
-                if 'Breakdown' in old_book.sheet_names:
-                    # Remove existing 'Breakdown' sheet in new workbook if present
-                    if 'Breakdown' in new_book.sheet_names:
-                        new_book.sheets['Breakdown'].delete()
-                    # Copy 'Breakdown' from old workbook to new workbook, placing it at the end
-                    old_sheet = old_book.sheets['Breakdown']
-                    old_sheet.api.Copy(After=new_book.sheets[-1].api)  # Place after the last sheet
-
                 # Transfer user data for other sheets
                 for sheet, ranges in template_mapping.items():
                     try:
