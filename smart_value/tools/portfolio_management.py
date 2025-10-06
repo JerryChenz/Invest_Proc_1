@@ -29,21 +29,35 @@ def calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_lo
     is_selected = getattr(opp, 'is_selected', None)
     price = getattr(opp, 'price', None)
     entry_price = getattr(opp, 'entry_price', None)
+    years = getattr(opp, 'holding_period', None)
 
     # Check if all required attributes are present and investment is eligible
     if (market_annual_return is not None and
-        price is not None and
-        entry_price is not None and
-        price <= entry_price):
+            price is not None and
+            entry_price is not None and
+            price <= entry_price):
         erb = market_annual_return - benchmark_return
         if erb > 0:  # Eligibility: ERB > 0
             w = market_annual_return  # Expected return at current market price
-            l = incorrect_loss + market_annual_return  # Loss at market price
             if w != 0:  # Avoid division by zero
-                hk_allocation = (p * w + (1 - p) * l) / (2 * w)
-                allocation_weight = max(hk_allocation, 0)  # Ensure non-negative
-                if is_selected == 'N':
-                    allocation_weight /= 2  # 50% of normal allocation for non-selected
+                # --- STEP 1: N-year compounded gain if right --------------------------
+                total_gain = (1 + market_annual_return) ** years - 1
+
+                # --- STEP 2: gain / loss ratio (Kelly's b) -----------------------------
+                loss_if_wrong = incorrect_loss  # capital loss
+                b = total_gain / loss_if_wrong
+
+                # --- STEP 3: raw Kelly -------------------------------------------------
+                q = 1 - p
+                kelly = (b * p - q) / b
+
+                # --- STEP 4: half Kelly ------------------------------------------------
+                half_kelly = kelly / 2
+                if is_selected == "N":
+                    half_kelly = half_kelly/2
+
+                # --- STEP 5: return ----------------------------------------------------
+                allocation_weight = max(0.0, half_kelly)  # never negative
                 return allocation_weight
     return 0
 
@@ -104,3 +118,4 @@ def update_monitor_data(monitor_wb, opportunities):
     # Generate markdown and log completion
     smart_value.tools.create_markdown.generate_monitor_md()
     print(f"Successfully updated {len(opportunities)} opportunities.")
+

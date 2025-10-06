@@ -183,7 +183,6 @@ class MonitorStock:
     """Represents a stock opportunity with data extracted from a valuation model.
 
     Attributes are dynamically created based on thesis_pos mapping.
-    Only includes attributes that exist in both thesis_pos and opportunities_headers.
     """
 
     def __init__(self, thesis_sheet):
@@ -192,7 +191,14 @@ class MonitorStock:
         Args:
             thesis_sheet (xlwings.Sheet): The 'Thesis' sheet from a valuation model.
         """
+
+        # Starts with attributes that exist in both thesis_pos and opportunities_headers.
         valid_attrs = set(thesis_pos.keys()) & set(opportunities_headers.keys())
+
+        # Manually add any extra attributes you want to include
+        extra_attrs = {"holding_period"}
+        valid_attrs |= extra_attrs
+
         for attr in valid_attrs:
             try:
                 value = thesis_sheet.range(thesis_pos[attr]).value

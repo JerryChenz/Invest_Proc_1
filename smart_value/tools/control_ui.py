@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from smart_value.tools import model_update, stock_monitor
+from smart_value.tools import stock_monitor
+from smart_value.tools.update import model_update
 from smart_value.tools.model_new import new_stock_model
 from smart_value.tools.find_docs import models_folder
 from smart_value.tools.level2_screener import update_level2_screener
