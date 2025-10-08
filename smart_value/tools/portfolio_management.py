@@ -11,31 +11,24 @@ from smart_value.data.monitor_data import (portfolio_mgmt_pos, opportunities_hea
 import smart_value.tools.create_markdown
 
 
-def calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_loss):
+def calculate_allocation_weight(market_annual_return, is_selected, years, benchmark_return, p, incorrect_loss):
     """
     Calculate the allocation weight for an opportunity using the Half Kelly Criterion.
 
     Args:
-        opp: The opportunity object with stock data.
+        market_annual_return: The opportunity's return at market price.
+        is_selected: Flag for selected opportunities.
+        years: Expected Holding Period.
         benchmark_return (float): The benchmark return rate (e.g., 11.74%).
         p (float): Valuation confidence (probability of intrinsic value accuracy).
-        target_w (float): Expected return at target price when correct (e.g., 35%).
         incorrect_loss (float): Expected loss at est. intrinsic value when incorrect.
 
     Returns:
         float: The allocation weight, or 0 if ineligible or calculation fails.
     """
-    market_annual_return = getattr(opp, 'market_annual_return', None)
-    is_selected = getattr(opp, 'is_selected', None)
-    price = getattr(opp, 'price', None)
-    entry_price = getattr(opp, 'entry_price', None)
-    years = getattr(opp, 'holding_period', None)
 
     # Check if all required attributes are present and investment is eligible
-    if (market_annual_return is not None and
-            price is not None and
-            entry_price is not None and
-            price <= entry_price):
+    if market_annual_return is not None:
         erb = market_annual_return - benchmark_return
         if erb > 0:  # Eligibility: ERB > 0
             w = market_annual_return  # Expected return at current market price
@@ -44,8 +37,7 @@ def calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_lo
                 total_gain = (1 + market_annual_return) ** years - 1
 
                 # --- STEP 2: gain / loss ratio (Kelly's b) -----------------------------
-                loss_if_wrong = incorrect_loss  # capital loss
-                b = total_gain / loss_if_wrong
+                b = total_gain / abs(incorrect_loss)
 
                 # --- STEP 3: raw Kelly -------------------------------------------------
                 q = 1 - p
@@ -54,7 +46,7 @@ def calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_lo
                 # --- STEP 4: half Kelly ------------------------------------------------
                 half_kelly = kelly / 2
                 if is_selected == "N":
-                    half_kelly = half_kelly/2
+                    half_kelly = half_kelly / 2
 
                 # --- STEP 5: return ----------------------------------------------------
                 allocation_weight = max(0.0, half_kelly)  # never negative
@@ -83,12 +75,17 @@ def update_monitor_data(monitor_wb, opportunities):
     # Retrieve parameters from Portfolio_Mgmt sheet
     benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['benchmark_return']).value
     p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # e.g., 60%
-    target_w = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['target_return']).value  # e.g., 35%
     incorrect_loss = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['incorrect_loss']).value  # e.g., -15%
 
     # Calculate allocation weights
     for opp in opportunities:
-        opp.allocation_weight = calculate_allocation_weight(opp, benchmark_return, p, target_w, incorrect_loss)
+        market_annual_return = getattr(opp, 'market_annual_return', None)
+        is_selected = getattr(opp, 'is_selected', None)
+        price = getattr(opp, 'price', None)
+        entry_price = getattr(opp, 'entry_price', None)
+        years = getattr(opp, 'holding_period', None)
+        opp.allocation_weight = calculate_allocation_weight(market_annual_return, is_selected, years,
+                                                            benchmark_return, p, incorrect_loss)
 
     # Sort opportunities by market_annual_return (equivalent to ERB descending)
     opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
@@ -119,3 +116,8 @@ def update_monitor_data(monitor_wb, opportunities):
     smart_value.tools.create_markdown.generate_monitor_md()
     print(f"Successfully updated {len(opportunities)} opportunities.")
 
+
+if __name__ == '__main__':
+    half_kelly = calculate_allocation_weight(0.23,
+                                             "Y", 3, 0.11, 0.6, -0.75)
+    assert round(half_kelly * 100, 1) == 12.6, "Incorrect Half Kelly"
