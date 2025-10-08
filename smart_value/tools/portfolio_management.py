@@ -13,7 +13,7 @@ import smart_value.tools.create_markdown
 
 def calculate_allocation_weight(market_annual_return, is_selected, years, benchmark_return, p, incorrect_loss):
     """
-    Calculate the allocation weight for an opportunity using the Half Kelly Criterion.
+    Calculate the allocation weight for an opportunity using the Full Kelly Criterion.
 
     Args:
         market_annual_return: The opportunity's return at market price.
@@ -39,17 +39,16 @@ def calculate_allocation_weight(market_annual_return, is_selected, years, benchm
                 # --- STEP 2: gain / loss ratio (Kelly's b) -----------------------------
                 b = total_gain / abs(incorrect_loss)
 
-                # --- STEP 3: raw Kelly -------------------------------------------------
+                # --- STEP 3: Full Kelly -------------------------------------------------
                 q = 1 - p
                 kelly = (b * p - q) / b
 
-                # --- STEP 4: half Kelly ------------------------------------------------
-                half_kelly = kelly / 2
+                # --- STEP 4: Half Kelly ------------------------------------------------
                 if is_selected == "N":
-                    half_kelly = half_kelly / 2
+                    kelly = kelly / 2
 
                 # --- STEP 5: return ----------------------------------------------------
-                allocation_weight = max(0.0, half_kelly)  # never negative
+                allocation_weight = max(0.0, kelly)  # never negative
                 return allocation_weight
     return 0
 
@@ -118,6 +117,6 @@ def update_monitor_data(monitor_wb, opportunities):
 
 
 if __name__ == '__main__':
-    half_kelly = calculate_allocation_weight(0.23,
+    half_kelly = calculate_allocation_weight(0.26,
                                              "Y", 3, 0.11, 0.6, -0.75)
-    assert round(half_kelly * 100, 1) == 12.6, "Incorrect Half Kelly"
+    assert round(half_kelly * 100, 1) == 30.0, "Incorrect Half Kelly"
