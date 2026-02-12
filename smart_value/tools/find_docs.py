@@ -24,6 +24,7 @@ project_root = pathlib.Path.cwd().resolve()
 models_folder = project_root / 'financial_models' / 'opportunities'
 templates_folder = project_root / 'financial_models' / 'templates'
 macro_monitor_file_path = project_root / 'financial_models' / 'Macro_Monitor.xlsx'
+bank_monitor_file_path = project_root / 'financial_models' / 'Bank_Monitor.xlsx'
 
 # Validation patterns
 MODEL_PATTERN = re.compile(
