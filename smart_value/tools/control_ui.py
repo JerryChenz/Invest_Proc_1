@@ -5,6 +5,7 @@ from smart_value.tools.update import model_update
 from smart_value.tools.model_new import new_stock_model
 from smart_value.tools.find_docs import models_folder
 from smart_value.tools.level2_screener import update_level2_screener
+from smart_value.tools.bank_monitor import main as bank_monitor_main
 import os
 import subprocess
 
@@ -42,6 +43,21 @@ def update_screener(sheet_name, root, status_var):
     except Exception as e:
         messagebox.showerror("Error", f"Failed to update {sheet_name}: {str(e)}", parent=root)
         status_var.set(f"Update failed for {sheet_name}")
+
+
+def run_bank_monitor(root, status_var):
+    """
+    Run the bank monitor to update stock prices in Bank_Monitor.xlsx.
+    """
+    try:
+        status_var.set("Updating bank stock prices...")
+        root.update()  # Force GUI update to show status
+        bank_monitor_main()  # Calls your bank_monitor.py main() function
+        status_var.set("Bank monitor updated successfully")
+        messagebox.showinfo("Success", "Bank stock prices updated successfully", parent=root)
+    except Exception as e:
+        messagebox.showerror("Error", f"Bank monitor update failed: {str(e)}", parent=root)
+        status_var.set("Bank monitor update failed")
 
 
 def update_model(root, status_var):
@@ -166,6 +182,8 @@ def invest_proc():
     ttk.Button(control_frame, text="Simple Monitor Update",
                command=lambda: stock_monitor.update_monitor(True)).grid(row=1, column=2, padx=10, pady=5, sticky='ew')
     control_frame.columnconfigure((0, 1, 2), weight=1)
+    ttk.Button(control_frame, text="Update Bank Prices",
+               command=lambda: run_bank_monitor(root, status_var)).grid(row=1, column=3, padx=10, pady=5, sticky='ew')
 
     # New Model Creation Section
     ttk.Label(input_frame, text="New Model Creation", style='Header.TLabel').grid(row=0, column=0, columnspan=3,
