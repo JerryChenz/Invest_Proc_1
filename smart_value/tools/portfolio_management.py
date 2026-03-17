@@ -79,7 +79,6 @@ def update_monitor_data(monitor_wb, opportunities):
         1. Retrieves portfolio parameters from Portfolio_Mgmt sheet.
         2. Calculates allocation weights for each opportunity.
         3. Writes sorted opportunity data to the Opportunities sheet.
-        4. Sets ERB and ERC formulas.
     """
     # Access required sheets
     sheet = monitor_wb.sheets['Opportunities']
@@ -113,24 +112,6 @@ def update_monitor_data(monitor_wb, opportunities):
     data = [{attr: getattr(opp, attr, None) for attr in column_order} for opp in opportunities]
     df = pd.DataFrame(data, columns=column_order)
     sheet.range(f"B{int(start_row)}").options(pd.DataFrame, header=False, index=False).value = df
-
-    # Set ERB and ERC formulas if there are opportunities
-    if opportunities:
-        try:
-            last_data_row = start_row + len(opportunities) - 1
-            benchmark_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['benchmark_return']}"
-            cash_yield_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['cash_yield']}"
-
-            # Set ERB formula (column G): Market Return - Benchmark
-            erb_formula = f"=F{{row}} - {benchmark_ref}"
-            sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula.replace("{row}", str(int(start_row)))
-
-            # Set ERC formula (column H): Market Return - Cash Yield
-            erc_formula = f"=F{{row}} - {cash_yield_ref}"
-            sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = erc_formula.replace("{row}", str(int(start_row)))
-
-        except Exception as e:
-            print(f"Error setting formulas: {e}")
 
     # Generate markdown and log completion
     smart_value.tools.create_markdown.generate_monitor_md()
