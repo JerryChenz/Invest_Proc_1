@@ -21,41 +21,56 @@ def get_fallback_rate(from_currency, to_currency):
 class ForexData:
 
     def __init__(self):
-
         self.cache = {}
         self.cache_expiration = timedelta(hours=1)
 
     # ----------------------------
-    # exchangerate.host API
+    # exchangerate API
     # ----------------------------
 
-    def _fetch_rate_from_api(
-        self,
-        from_currency,
-        to_currency,
-    ):
+    def _fetch_rate_from_api(self, from_currency, to_currency):
 
-        url = "https://api.exchangerate.host/convert"
+        url = f"https://open.er-api.com/v6/latest/{from_currency}"
 
-        params = {
-            "from": from_currency,
-            "to": to_currency,
-        }
+        print("Request:", url)
 
         r = requests.get(
             url,
-            params=params,
-            timeout=10,
+            timeout=(3, 5),
         )
 
         r.raise_for_status()
 
         data = r.json()
 
-        if "result" not in data:
+        if data.get("result") != "success":
             raise RuntimeError(data)
 
-        return float(data["result"])
+        rates = data.get("rates", {})
+
+        now = datetime.now()
+
+        # store ALL rates in cache
+        for cur, value in rates.items():
+
+            key = f"{from_currency}{cur}"
+            inv = f"{cur}{from_currency}"
+
+            self.cache[key] = {
+                "rate": float(value),
+                "timestamp": now,
+            }
+
+            if value != 0:
+                self.cache[inv] = {
+                    "rate": 1.0 / float(value),
+                    "timestamp": now,
+                }
+
+        if to_currency not in rates:
+            raise RuntimeError("Currency not found")
+
+        return float(rates[to_currency])
 
     # ----------------------------
     # main
@@ -66,6 +81,8 @@ class ForexData:
         from_currency,
         to_currency,
     ):
+
+        print("get_rate", from_currency, to_currency)
 
         if from_currency == to_currency:
             return 1.0
@@ -85,10 +102,7 @@ class ForexData:
 
                 entry = self.cache[key]
 
-                if (
-                    now - entry["timestamp"]
-                    < self.cache_expiration
-                ):
+                if now - entry["timestamp"] < self.cache_expiration:
 
                     rate = (
                         entry["rate"]
@@ -109,7 +123,7 @@ class ForexData:
                     return rate
 
         # ------------------------
-        # exchangerate.host
+        # API
         # ------------------------
 
         try:
@@ -122,8 +136,7 @@ class ForexData:
         except Exception as e:
 
             print(
-                f"EXCHANGERATE.HOST failed "
-                f"{from_currency}{to_currency}: {e}"
+                f"API failed {from_currency}{to_currency}: {e}"
             )
 
             # ------------------------
@@ -138,15 +151,13 @@ class ForexData:
                 )
 
                 print(
-                    f"yfinance OK "
-                    f"{from_currency}{to_currency}"
+                    f"yfinance OK {from_currency}{to_currency}"
                 )
 
             except Exception as e:
 
                 print(
-                    f"yfinance failed "
-                    f"{from_currency}{to_currency}: {e}"
+                    f"yfinance failed {from_currency}{to_currency}: {e}"
                 )
 
                 # ------------------------
@@ -159,8 +170,7 @@ class ForexData:
                 )
 
                 print(
-                    f"fallback used "
-                    f"{from_currency}{to_currency}"
+                    f"fallback used {from_currency}{to_currency}"
                 )
 
         # ------------------------

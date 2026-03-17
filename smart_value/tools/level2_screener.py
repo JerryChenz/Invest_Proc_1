@@ -79,7 +79,7 @@ EXCEL_FILE_PATH = 'financial_models/level2_screener.xlsx'
 
 rate_to_usd = {
     'USD': 1.0,
-    'CNY': 1 / 7.2,
+    'CNY': 1 / 7,
     'HKD': 0.13,
     'MOP': 0.12,
     'JPY': 1 / 142.63,
