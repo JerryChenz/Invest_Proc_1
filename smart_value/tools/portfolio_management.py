@@ -53,12 +53,14 @@ def calculate_allocation_weight(market_annual_return, is_selected, years, benchm
 
     # --- STEP 3: Full Kelly -------------------------------------------------
     q = 1 - p
-    kelly = (b * p - q) / b
+    full_kelly = (b * p - q) / b
 
-    # --- STEP 4: Apply Kelly adjustment based on selection -------------------
-    # Selected opportunities use Full Kelly, non-selected use Half Kelly
-    if is_selected != "Y":
-        kelly = kelly / 2
+    # --- STEP 4: Apply Kelly fraction based on selection -------------------
+    # Selected opportunities use Half Kelly, non-selected use 1/3 Kelly
+    if is_selected == "Y":
+        kelly = full_kelly / 2  # Half Kelly
+    else:
+        kelly = full_kelly / 3  # 1/3 Kelly
 
     # --- STEP 5: return ----------------------------------------------------
     allocation_weight = max(0.0, kelly)  # never negative
@@ -136,16 +138,15 @@ def update_monitor_data(monitor_wb, opportunities):
 
 
 if __name__ == '__main__':
-    # Test case: Full Kelly for selected opportunity
-    full_kelly = calculate_allocation_weight(
-        0.26, "Y", 3, 0.11, 0.6, -0.75
-    )
-    assert round(full_kelly * 100, 1) == 30.0, f"Incorrect Full Kelly: got {round(full_kelly * 100, 1)}%"
+    # Test parameters: 26% return, 3 years, 11% benchmark, 60% confidence, -75% loss
+    # Full Kelly = ~30%, Half Kelly = ~15%, 1/3 Kelly = ~10%
 
-    # Test case: Half Kelly for non-selected opportunity
-    half_kelly = calculate_allocation_weight(
-        0.26, "N", 3, 0.11, 0.6, -0.75
-    )
-    assert round(half_kelly * 100, 1) == 15.0, f"Incorrect Half Kelly: got {round(half_kelly * 100, 1)}%"
+    # Test case: Selected opportunity uses Half Kelly (~15%)
+    selected_weight = calculate_allocation_weight(0.26, "Y", 3, 0.11, 0.6, -0.75)
+    assert round(selected_weight * 100, 1) == 15.0, f"Incorrect Half Kelly for selected: got {round(selected_weight * 100, 1)}%"
+
+    # Test case: Non-selected opportunity uses 1/3 Kelly (~10%)
+    non_selected_weight = calculate_allocation_weight(0.26, "N", 3, 0.11, 0.6, -0.75)
+    assert round(non_selected_weight * 100, 1) == 10.0, f"Incorrect 1/3 Kelly for non-selected: got {round(non_selected_weight * 100, 1)}%"
 
     print("All tests passed!")
