@@ -1,72 +1,180 @@
-import os
+import requests
 from datetime import datetime, timedelta
-from alpha_vantage.foreignexchange import ForeignExchange
 from smart_value.data.yf_data import get_rate_from_yfinance
 
 
 def get_fallback_rate(from_currency, to_currency):
     """Fallback rates for critical currency pairs"""
     fallback_rates = {
-        'HKDHKD': 1.0,
-        'CNYHKD': 1.07,
-        'USDHKD': 7.8,
-        'CNYUSD': 1 / 7.22,
-        'USDCNY': 7.22,
-        'HKDUSD': 1 / 7.8
+        "HKDHKD": 1.0,
+        "CNYHKD": 1.07,
+        "USDHKD": 7.8,
+        "CNYUSD": 1 / 7.22,
+        "USDCNY": 7.22,
+        "HKDUSD": 1 / 7.8,
     }
-    return fallback_rates.get(f"{from_currency}{to_currency}", 1.0)
+    return fallback_rates.get(
+        f"{from_currency}{to_currency}", 1.0
+    )
 
 
 class ForexData:
+
     def __init__(self):
-        self.api_key = os.getenv('ALPHA_VANTAGE_API_KEY', 'KSZMAKF6SIRDVE1Y')
-        self.fx = ForeignExchange(key=self.api_key)
+
         self.cache = {}
         self.cache_expiration = timedelta(hours=1)
 
-    def get_rate(self, from_currency, to_currency):
-        """Get exchange rate with caching, using inverse rates when possible."""
+    # ----------------------------
+    # exchangerate.host API
+    # ----------------------------
+
+    def _fetch_rate_from_api(
+        self,
+        from_currency,
+        to_currency,
+    ):
+
+        url = "https://api.exchangerate.host/convert"
+
+        params = {
+            "from": from_currency,
+            "to": to_currency,
+        }
+
+        r = requests.get(
+            url,
+            params=params,
+            timeout=10,
+        )
+
+        r.raise_for_status()
+
+        data = r.json()
+
+        if "result" not in data:
+            raise RuntimeError(data)
+
+        return float(data["result"])
+
+    # ----------------------------
+    # main
+    # ----------------------------
+
+    def get_rate(
+        self,
+        from_currency,
+        to_currency,
+    ):
+
         if from_currency == to_currency:
             return 1.0
 
         cache_key = f"{from_currency}{to_currency}"
-        inverse_cache_key = f"{to_currency}{from_currency}"
+        inverse_key = f"{to_currency}{from_currency}"
+
         now = datetime.now()
 
-        # Check cache for direct or inverse rate
-        for key in [cache_key, inverse_cache_key]:
+        # ------------------------
+        # cache
+        # ------------------------
+
+        for key in [cache_key, inverse_key]:
+
             if key in self.cache:
+
                 entry = self.cache[key]
-                if now - entry['timestamp'] < self.cache_expiration:
-                    rate = entry['rate'] if key == cache_key else 1.0 / entry['rate']
-                    # Update both keys in cache to optimize future requests
-                    self.cache[cache_key] = {'rate': rate, 'timestamp': entry['timestamp']}
-                    self.cache[inverse_cache_key] = {'rate': 1.0 / rate, 'timestamp': entry['timestamp']}
+
+                if (
+                    now - entry["timestamp"]
+                    < self.cache_expiration
+                ):
+
+                    rate = (
+                        entry["rate"]
+                        if key == cache_key
+                        else 1.0 / entry["rate"]
+                    )
+
+                    self.cache[cache_key] = {
+                        "rate": rate,
+                        "timestamp": entry["timestamp"],
+                    }
+
+                    self.cache[inverse_key] = {
+                        "rate": 1.0 / rate,
+                        "timestamp": entry["timestamp"],
+                    }
+
                     return rate
 
-        # If not found in cache, proceed to fetch rate
-        if from_currency == 'USD' or to_currency == 'USD':
-            try:
-                data, _ = self.fx.get_currency_exchange_rate(
-                    from_currency=from_currency,
-                    to_currency=to_currency
-                )
-                rate = float(data['5. Exchange Rate'])
-            except Exception as e:
-                print(f"Alpha Vantage failed: retry with yfinance for {from_currency}{to_currency}: {str(e)}")
-                try:
-                    rate = get_rate_from_yfinance(from_currency, to_currency)
-                    print(f"yfinance succeeded at {from_currency}{to_currency}")
-                except Exception as e:
-                    print(f"Forex update failed: Use fallback rates for {from_currency}{to_currency}: {str(e)}")
-                    rate = get_fallback_rate(from_currency, to_currency)
-        else:
-            # Calculate cross rate via USD
-            usd_from = self.get_rate(from_currency, 'USD')
-            usd_to = self.get_rate('USD', to_currency)
-            rate = usd_from * usd_to
+        # ------------------------
+        # exchangerate.host
+        # ------------------------
 
-        # Update cache with both direct and inverse rates
-        self.cache[cache_key] = {'rate': rate, 'timestamp': now}
-        self.cache[inverse_cache_key] = {'rate': 1.0 / rate, 'timestamp': now}
+        try:
+
+            rate = self._fetch_rate_from_api(
+                from_currency,
+                to_currency,
+            )
+
+        except Exception as e:
+
+            print(
+                f"EXCHANGERATE.HOST failed "
+                f"{from_currency}{to_currency}: {e}"
+            )
+
+            # ------------------------
+            # yfinance fallback
+            # ------------------------
+
+            try:
+
+                rate = get_rate_from_yfinance(
+                    from_currency,
+                    to_currency,
+                )
+
+                print(
+                    f"yfinance OK "
+                    f"{from_currency}{to_currency}"
+                )
+
+            except Exception as e:
+
+                print(
+                    f"yfinance failed "
+                    f"{from_currency}{to_currency}: {e}"
+                )
+
+                # ------------------------
+                # hardcoded fallback
+                # ------------------------
+
+                rate = get_fallback_rate(
+                    from_currency,
+                    to_currency,
+                )
+
+                print(
+                    f"fallback used "
+                    f"{from_currency}{to_currency}"
+                )
+
+        # ------------------------
+        # update cache
+        # ------------------------
+
+        self.cache[cache_key] = {
+            "rate": rate,
+            "timestamp": now,
+        }
+
+        self.cache[inverse_key] = {
+            "rate": 1.0 / rate,
+            "timestamp": now,
+        }
+
         return rate
