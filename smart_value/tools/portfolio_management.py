@@ -13,44 +13,56 @@ import smart_value.tools.create_markdown
 
 def calculate_allocation_weight(market_annual_return, is_selected, years, benchmark_return, p, incorrect_loss):
     """
-    Calculate the allocation weight for an opportunity using the Full Kelly Criterion.
+    Calculate the allocation weight for an opportunity using the Kelly Criterion.
 
     Args:
         market_annual_return: The opportunity's return at market price.
-        is_selected: Flag for selected opportunities.
+        is_selected: Flag for selected opportunities ("Y" for selected, "N" for not).
         years: Expected Holding Period.
         benchmark_return (float): The benchmark return rate (e.g., 11.74%).
         p (float): Valuation confidence (probability of intrinsic value accuracy).
-        incorrect_loss (float): Expected loss at est. intrinsic value when incorrect.
+        incorrect_loss (float): Expected loss at est. intrinsic value when incorrect (negative value).
 
     Returns:
         float: The allocation weight, or 0 if ineligible or calculation fails.
     """
 
     # Check if all required attributes are present and investment is eligible
-    if market_annual_return is not None:
-        erb = market_annual_return - benchmark_return
-        if erb > 0:  # Eligibility: ERB > 0
-            w = market_annual_return  # Expected return at current market price
-            if w != 0:  # Avoid division by zero
-                # --- STEP 1: N-year compounded gain if right --------------------------
-                total_gain = (1 + market_annual_return) ** years - 1
+    if market_annual_return is None or years is None or years <= 0:
+        return 0.0
 
-                # --- STEP 2: gain / loss ratio (Kelly's b) -----------------------------
-                b = total_gain / abs(incorrect_loss)
+    erb = market_annual_return - benchmark_return
+    if erb <= 0:  # Eligibility: ERB > 0
+        return 0.0
 
-                # --- STEP 3: Full Kelly -------------------------------------------------
-                q = 1 - p
-                kelly = (b * p - q) / b
+    # Expected return at current market price
+    w = market_annual_return
+    if w == 0:  # Avoid division by zero
+        return 0.0
 
-                # --- STEP 4: Half Kelly ------------------------------------------------
-                if is_selected == "N":
-                    kelly = kelly / 2
+    # --- STEP 1: N-year compounded gain if right --------------------------
+    total_gain = (1 + market_annual_return) ** years - 1
 
-                # --- STEP 5: return ----------------------------------------------------
-                allocation_weight = max(0.0, kelly)  # never negative
-                return allocation_weight
-    return 0
+    # --- STEP 2: gain / loss ratio (Kelly's b) -----------------------------
+    # Ensure incorrect_loss is positive for ratio calculation
+    loss_magnitude = abs(incorrect_loss) if incorrect_loss != 0 else 0.5
+    if loss_magnitude == 0:
+        return 0.0
+
+    b = total_gain / loss_magnitude
+
+    # --- STEP 3: Full Kelly -------------------------------------------------
+    q = 1 - p
+    kelly = (b * p - q) / b
+
+    # --- STEP 4: Apply Kelly adjustment based on selection -------------------
+    # Selected opportunities use Full Kelly, non-selected use Half Kelly
+    if is_selected != "Y":
+        kelly = kelly / 2
+
+    # --- STEP 5: return ----------------------------------------------------
+    allocation_weight = max(0.0, kelly)  # never negative
+    return allocation_weight
 
 
 def update_monitor_data(monitor_wb, opportunities):
@@ -74,17 +86,17 @@ def update_monitor_data(monitor_wb, opportunities):
     # Retrieve parameters from Portfolio_Mgmt sheet
     benchmark_return = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['benchmark_return']).value
     p = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['correct_chance']).value  # e.g., 60%
-    incorrect_loss = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['incorrect_loss']).value  # e.g., -15%
+    incorrect_loss = portfolio_mgmt_sheet.range(portfolio_mgmt_pos['incorrect_loss']).value  # e.g., -50%
 
     # Calculate allocation weights
     for opp in opportunities:
         market_annual_return = getattr(opp, 'market_annual_return', None)
         is_selected = getattr(opp, 'is_selected', None)
-        price = getattr(opp, 'price', None)
-        entry_price = getattr(opp, 'entry_price', None)
         years = getattr(opp, 'holding_period', None)
-        opp.allocation_weight = calculate_allocation_weight(market_annual_return, is_selected, years,
-                                                            benchmark_return, p, incorrect_loss)
+        opp.allocation_weight = calculate_allocation_weight(
+            market_annual_return, is_selected, years,
+            benchmark_return, p, incorrect_loss
+        )
 
     # Sort opportunities by market_annual_return (equivalent to ERB descending)
     opportunities.sort(key=lambda opp: getattr(opp, 'market_annual_return', float('-inf')), reverse=True)
@@ -106,8 +118,15 @@ def update_monitor_data(monitor_wb, opportunities):
             last_data_row = start_row + len(opportunities) - 1
             benchmark_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['benchmark_return']}"
             cash_yield_ref = f"Portfolio_Mgmt!{portfolio_mgmt_pos['cash_yield']}"
-            sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = f"=F{int(start_row)} - {benchmark_ref}"
-            sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = f"=F{int(start_row)} - {cash_yield_ref}"
+
+            # Set ERB formula (column G): Market Return - Benchmark
+            erb_formula = f"=F{{row}} - {benchmark_ref}"
+            sheet.range(f"G{int(start_row)}:G{int(last_data_row)}").formula = erb_formula.replace("{row}", str(int(start_row)))
+
+            # Set ERC formula (column H): Market Return - Cash Yield
+            erc_formula = f"=F{{row}} - {cash_yield_ref}"
+            sheet.range(f"H{int(start_row)}:H{int(last_data_row)}").formula = erc_formula.replace("{row}", str(int(start_row)))
+
         except Exception as e:
             print(f"Error setting formulas: {e}")
 
@@ -117,6 +136,16 @@ def update_monitor_data(monitor_wb, opportunities):
 
 
 if __name__ == '__main__':
-    half_kelly = calculate_allocation_weight(0.26,
-                                             "Y", 3, 0.11, 0.6, -0.75)
-    assert round(half_kelly * 100, 1) == 30.0, "Incorrect Half Kelly"
+    # Test case: Full Kelly for selected opportunity
+    full_kelly = calculate_allocation_weight(
+        0.26, "Y", 3, 0.11, 0.6, -0.75
+    )
+    assert round(full_kelly * 100, 1) == 30.0, f"Incorrect Full Kelly: got {round(full_kelly * 100, 1)}%"
+
+    # Test case: Half Kelly for non-selected opportunity
+    half_kelly = calculate_allocation_weight(
+        0.26, "N", 3, 0.11, 0.6, -0.75
+    )
+    assert round(half_kelly * 100, 1) == 15.0, f"Incorrect Half Kelly: got {round(half_kelly * 100, 1)}%"
+
+    print("All tests passed!")
