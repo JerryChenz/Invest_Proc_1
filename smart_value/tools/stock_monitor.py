@@ -87,6 +87,7 @@ def update_monitor(skip=True):
     # Step 2: Process models and collect opportunities
     forex_data = None
     price_dict = None
+    forex_cache = {}  # Cache for forex rates to avoid redundant API calls
     if not skip:
         try:
             forex_data = ForexData()
@@ -112,16 +113,32 @@ def update_monitor(skip=True):
                     thesis_sheet.range(thesis_pos['price']).value = price_dict[symbol]
                     need_save = True
 
-                # Update forex rate
+                # Update forex rate with caching and same-currency check
                 price_currency = thesis_sheet.range(thesis_pos['price_currency']).value
                 report_currency = thesis_sheet.range(thesis_pos['report_currency']).value
-                if forex_data:
-                    try:
-                        fx_rate = forex_data.get_rate(report_currency, price_currency)
+                if price_currency and report_currency:
+                    if price_currency == report_currency:
+                        # Same currency, rate is always 1
+                        fx_rate = 1
+                    else:
+                        # Different currencies - check cache or fetch
+                        cache_key = (report_currency, price_currency)
+                        if cache_key in forex_cache:
+                            fx_rate = forex_cache[cache_key]
+                        elif forex_data:
+                            try:
+                                fx_rate = forex_data.get_rate(report_currency, price_currency)
+                                forex_cache[cache_key] = fx_rate
+                            except Exception as e:
+                                print(f"Error getting forex rate for {report_currency}/{price_currency}: {e}")
+                                fx_rate = None
+                                forex_cache[cache_key] = None
+                        else:
+                            fx_rate = None
+
+                    if fx_rate is not None:
                         thesis_sheet.range(thesis_pos['fx_rate']).value = fx_rate
                         need_save = True
-                    except Exception as e:
-                        print(f"Error getting forex rate for {report_currency}/{price_currency}: {e}")
 
                 # Update assumptions
                 portfolio_code = thesis_sheet.range(thesis_pos['portfolio_code']).value

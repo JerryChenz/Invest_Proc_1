@@ -64,7 +64,7 @@ class ForexData:
         base = from_currency.upper()
         target = to_currency.upper()
 
-        print(f"get_rate  {base} → {target}")
+        # print(f"get_rate  {base} → {target}")
 
         if base == target:
             return 1.0
